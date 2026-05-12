@@ -61,7 +61,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS active_user_phone
     ON users(TRIM(phone))
     WHERE archived_at IS NULL;
 
-CREATE TABLE IF NOT EXISTS user_session (
+CREATE TABLE IF NOT EXISTS user_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),

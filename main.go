@@ -2,6 +2,7 @@ package main
 
 import (
 	"crickxi-backend/database"
+	"crickxi-backend/routes"
 )
 
 func main() {
@@ -16,6 +17,11 @@ func main() {
 	)
 
 	if err != nil {
+		panic(err)
+	}
+
+	srv := routes.SetUpRoutes()
+	if err := srv.Run(":8080"); err != nil {
 		panic(err)
 	}
 }
