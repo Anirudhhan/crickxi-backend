@@ -2,8 +2,6 @@ package main
 
 import (
 	"crickxi-backend/database"
-	"log"
-	"os"
 )
 
 func main() {
@@ -11,7 +9,7 @@ func main() {
 	err := database.ConnectAndMigrate(
 		"localhost",
 		"5432",
-		"todo",
+		"crickxi",
 		"local",
 		"local",
 		database.SSLMode(database.SSLModeDisable),
@@ -19,10 +17,5 @@ func main() {
 
 	if err != nil {
 		panic(err)
-	}
-
-	secret, exists := os.LookupEnv("ACCESS_SECRET")
-	if !exists || secret == "" {
-		log.Fatal("ACCESS_SECRET is not set")
 	}
 }
