@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"crickxi-backend/handler"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,7 @@ func SetUpRoutes() *gin.Engine {
 				"message": "server is running",
 			})
 		})
+		v1.POST("/register", handler.RegisterUser)
 	}
 
 	return router

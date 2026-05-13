@@ -72,11 +72,13 @@ func Tx(fn func(tx *sqlx.Tx) error) (err error) {
 	}
 
 	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+
 		if err != nil {
-			err := tx.Rollback()
-			if err != nil {
-				return
-			}
+			_ = tx.Rollback()
 			return
 		}
 
