@@ -1,4 +1,4 @@
-package dbhelper
+package dbHelper
 
 import (
 	"crickxi-backend/database"
@@ -40,4 +40,22 @@ func GetLoginDetailsByPhone(phone string) (userDetails models.LoginUserDetails, 
 
 	err = database.DB.Get(&userDetails, query, phone)
 	return userDetails, err
+}
+
+func GetUserIDByActiveSession(sessionID string) (string, error) {
+	query := `SELECT user_id 
+		FROM user_sessions 
+		WHERE id = $1 AND archived_at IS NULL`
+
+	var userID string
+	err := database.DB.Get(&userID, query, sessionID)
+	return userID, err
+}
+
+func ArchiveUserSession(sessionID string) error {
+	query := `UPDATE user_sessions SET archived_at = NOW() 
+            WHERE id = $1 AND archived_at IS NULL`
+
+	_, err := database.DB.Exec(query, sessionID)
+	return err
 }
