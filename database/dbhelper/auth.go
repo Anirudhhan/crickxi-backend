@@ -1,6 +1,9 @@
 package dbhelper
 
 import (
+	"crickxi-backend/database"
+	"crickxi-backend/models"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -20,4 +23,21 @@ func RegisterPlayerStats(tx *sqlx.Tx, userID string) (playerID string, err error
 
 	err = tx.Get(&playerID, query, userID)
 	return playerID, err
+}
+
+func CreateUserSession(userID string) (sessionID string, err error) {
+	query := `INSERT INTO user_sessions(user_id) VALUES($1) RETURNING id`
+
+	err = database.DB.Get(&sessionID, query, userID)
+	return sessionID, err
+}
+
+func GetLoginDetailsByPhone(phone string) (userDetails models.LoginUserDetails, err error) {
+	query := `SELECT id, password
+			FROM users
+			WHERE phone = $1
+			AND archived_at IS NULL`
+
+	err = database.DB.Get(&userDetails, query, phone)
+	return userDetails, err
 }

@@ -18,6 +18,7 @@ func SetUpRoutes() *gin.Engine {
 			})
 		})
 		v1.POST("/register", handler.RegisterUser)
+		v1.POST("/login", handler.LoginUser)
 	}
 
 	return router
