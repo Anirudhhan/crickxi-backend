@@ -2,6 +2,7 @@ package routes
 
 import (
 	"crickxi-backend/handler"
+	"crickxi-backend/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,11 @@ func SetUpRoutes() *gin.Engine {
 		})
 		v1.POST("/register", handler.RegisterUser)
 		v1.POST("/login", handler.LoginUser)
+		v1.GET("/refresh", handler.RefreshToken)
+
+		auth := v1.Group("/")
+		auth.Use(middleware.AuthMiddleware())
+		auth.PUT("/logout", handler.Logout)
 	}
 
 	return router

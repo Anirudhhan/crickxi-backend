@@ -2,7 +2,7 @@ package handler
 
 import (
 	"crickxi-backend/database"
-	"crickxi-backend/database/dbhelper"
+	"crickxi-backend/database/dbHelper"
 	"crickxi-backend/models"
 	"crickxi-backend/utils"
 	"database/sql"
@@ -35,12 +35,12 @@ func RegisterUser(ctx *gin.Context) {
 	var userID string
 	var playerID string
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
-		userID, err = dbhelper.RegisterUser(tx, registerUserReq.Name, registerUserReq.Phone, hashedPassword)
+		userID, err = dbHelper.RegisterUser(tx, registerUserReq.Name, registerUserReq.Phone, hashedPassword)
 		if err != nil {
 			return err
 		}
 
-		playerID, err = dbhelper.RegisterPlayerStats(tx, userID)
+		playerID, err = dbHelper.RegisterPlayerStats(tx, userID)
 		if err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	userDetails, err := dbhelper.GetLoginDetailsByPhone(loginUserReq.Phone)
+	userDetails, err := dbHelper.GetLoginDetailsByPhone(loginUserReq.Phone)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.ErrorResponse(ctx, http.StatusForbidden, err, "invalid credentials")
@@ -91,7 +91,7 @@ func LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	sessionID, err := dbhelper.CreateUserSession(userDetails.UserID)
+	sessionID, err := dbHelper.CreateUserSession(userDetails.UserID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, err.Error())
 		return
@@ -106,6 +106,52 @@ func LoginUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":     "user logged in successfully",
 		"sessionID":   sessionID,
+		"accessToken": accessToken,
+	})
+}
+
+func Logout(ctx *gin.Context) {
+	sessionID := ctx.GetString("session_id")
+
+	err := dbHelper.ArchiveUserSession(sessionID)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to logout user")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "user logged out successfully",
+	})
+}
+
+func RefreshToken(ctx *gin.Context) {
+	sessionID := ctx.GetHeader("sessionID")
+
+	if sessionID == "" {
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("missing session"), "unauthorized")
+		return
+	}
+
+	userID, err := dbHelper.GetUserIDByActiveSession(sessionID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.ErrorResponse(ctx, http.StatusUnauthorized, err, "invalid session")
+			return
+		}
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, err.Error())
+		return
+	}
+
+	accessToken, err := utils.GenerateAccessToken(
+		userID,
+		sessionID,
+	)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to generate token")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
 		"accessToken": accessToken,
 	})
 }
