@@ -59,3 +59,23 @@ func ArchiveUserSession(sessionID string) error {
 	_, err := database.DB.Exec(query, sessionID)
 	return err
 }
+
+func UpdateUserPassword(tx *sqlx.Tx, phone string, hashedPassword string) (userID string, err error) {
+	query := `UPDATE users
+				SET password = $1, updated_at = NOW()
+				WHERE phone_no = $2
+				AND archived_at IS NULL RETURNING id`
+
+	err = tx.Get(&userID, query, hashedPassword, phone)
+	return userID, err
+}
+
+func ArchiveUserSessions(tx *sqlx.Tx, userID string) error {
+	query := `UPDATE user_sessions
+			SET archived_at = NOW()
+			WHERE user_id = $1
+			AND archived_at IS NULL`
+
+	_, err := tx.Exec(query, userID)
+	return err
+}

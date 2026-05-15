@@ -155,3 +155,55 @@ func RefreshToken(ctx *gin.Context) {
 		"accessToken": accessToken,
 	})
 }
+
+func ResetPassword(ctx *gin.Context) {
+	var userReq struct {
+		PhoneNo     string `db:"phone_no" json:"phone" binding:"required"`
+		NewPassword string `db:"password" json:"password" binding:"required,min=8"`
+		OTP         string `json:"otp" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&userReq); err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
+		return
+	}
+
+	if userReq.OTP != "8080" {
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("invalid otp"), "invalid otp")
+		return
+	}
+
+	hashedPassword, err := utils.HashPassword(userReq.NewPassword)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
+
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		userID, err := dbHelper.UpdateUserPassword(tx, userReq.PhoneNo, hashedPassword)
+		if err != nil {
+			return err
+		}
+
+		err = dbHelper.ArchiveUserSessions(tx, userID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+
+		if errors.Is(txErr, sql.ErrNoRows) {
+			utils.ErrorResponse(ctx, http.StatusNotFound, txErr, "user not found")
+			return
+		}
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to update password")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "password updated successfully",
+	})
+
+}
