@@ -50,7 +50,7 @@ CREATE TYPE extra_type AS ENUM (
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    phone TEXT NOT NULL,
+    phone_no TEXT NOT NULL,
     password TEXT,
     updated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS active_user_phone
-    ON users(TRIM(phone))
+    ON users(TRIM(phone_no))
     WHERE archived_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS user_sessions (
@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS balls (
     ball_sequence INT NOT NULL,
     over_number INT NOT NULL,
     ball_in_over INT NOT NULL,
+    is_free_hit BOOLEAN DEFAULT FALSE,
     is_legal_delivery BOOLEAN DEFAULT TRUE,
     striker_id UUID REFERENCES player_stats(id) NOT NULL,
     non_striker_id UUID REFERENCES player_stats(id) NOT NULL,

@@ -8,7 +8,7 @@ import (
 )
 
 func RegisterUser(tx *sqlx.Tx, name string, phone string, hashedPassword string) (userID string, err error) {
-	query := `INSERT INTO users(name, phone, password) 
+	query := `INSERT INTO users(name, phone_no, password) 
 	          VALUES ($1, $2, $3) 
 	          RETURNING id`
 
@@ -35,7 +35,7 @@ func CreateUserSession(userID string) (sessionID string, err error) {
 func GetLoginDetailsByPhone(phone string) (userDetails models.LoginUserDetails, err error) {
 	query := `SELECT id, password
 			FROM users
-			WHERE phone = $1
+			WHERE phone_no = $1
 			AND archived_at IS NULL`
 
 	err = database.DB.Get(&userDetails, query, phone)
