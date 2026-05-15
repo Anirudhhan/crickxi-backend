@@ -35,6 +35,7 @@ func SetUpRoutes() *gin.Engine {
 
 		v1.POST("/register", handler.RegisterUser)
 		v1.POST("/login", handler.LoginUser)
+		v1.POST("/reset-password", handler.ResetPassword)
 		v1.GET("/refresh", handler.RefreshToken)
 
 		auth := v1.Group("/")
