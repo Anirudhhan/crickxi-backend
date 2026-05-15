@@ -41,6 +41,11 @@ func SetUpRoutes() *gin.Engine {
 		auth := v1.Group("/")
 		auth.Use(middleware.AuthMiddleware())
 		auth.PUT("/logout", handler.Logout)
+
+		{
+			profile := auth.Group("/players")
+			profile.GET("/:userID", handler.GetPlayerStats)
+		}
 	}
 
 	return router
