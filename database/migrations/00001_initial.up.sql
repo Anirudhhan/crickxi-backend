@@ -71,13 +71,58 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE TABLE IF NOT EXISTS player_stats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
+
+    -- batting
     runs BIGINT DEFAULT 0,
+    balls_faced BIGINT DEFAULT 0,
+    innings_batted BIGINT DEFAULT 0,
+    not_outs BIGINT DEFAULT 0,
+
+    fours BIGINT DEFAULT 0,
+    sixes BIGINT DEFAULT 0,
+
+    highest_score INT DEFAULT 0,
+
+    ducks BIGINT DEFAULT 0,
+    golden_ducks BIGINT DEFAULT 0,
+
+    fifties BIGINT DEFAULT 0,
+    hundreds BIGINT DEFAULT 0,
+
+    -- bowling
+    wickets BIGINT DEFAULT 0,
+
+    balls_bowled BIGINT DEFAULT 0,
+    runs_conceded BIGINT DEFAULT 0,
+
+    maiden_overs BIGINT DEFAULT 0,
+
+    wides BIGINT DEFAULT 0,
+    no_balls BIGINT DEFAULT 0,
+
+    best_bowling_wickets INT DEFAULT 0,
+    best_bowling_runs INT DEFAULT 0,
+
+    innings_bowled BIGINT DEFAULT 0,
+
+    -- fielding
     catches BIGINT DEFAULT 0,
     run_outs BIGINT DEFAULT 0,
-    wickets BIGINT DEFAULT 0,
+    stumpings BIGINT DEFAULT 0,
+
+    -- match stats
     matches_played BIGINT DEFAULT 0,
+    matches_won BIGINT DEFAULT 0,
+    matches_lost BIGINT DEFAULT 0,
+
+    -- fantasy/game points
+    total_points BIGINT DEFAULT 0,
+    mvps BIGINT DEFAULT 0,
+
+    -- styles
     bowling_style bowling_style,
     batting_style batting_style,
+
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     archived_at TIMESTAMPTZ
