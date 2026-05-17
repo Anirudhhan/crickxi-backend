@@ -33,23 +33,32 @@ func CreateUserSession(userID string) (sessionID string, err error) {
 }
 
 func GetLoginDetailsByPhone(phone string) (userDetails models.LoginUserDetails, err error) {
-	query := `SELECT id, password
-			FROM users
-			WHERE phone_no = $1
-			AND archived_at IS NULL`
+	query := `SELECT u.id AS user_id, ps.id AS player_id, u.password
+		FROM users u
+		JOIN player_stats ps
+			ON u.id = ps.user_id
+		WHERE
+			u.phone_no = $1
+			AND u.archived_at IS NULL
+			AND ps.archived_at IS NULL`
 
 	err = database.DB.Get(&userDetails, query, phone)
 	return userDetails, err
 }
 
-func GetUserIDByActiveSession(sessionID string) (string, error) {
-	query := `SELECT user_id 
-		FROM user_sessions 
-		WHERE id = $1 AND archived_at IS NULL`
+func GetUserAndPlayerIDByActiveSession(sessionID string) (userDetails models.SessionUserDetails, err error) {
+	query := `SELECT us.user_id, ps.id AS player_id
+				FROM user_sessions us
+				  JOIN users u ON u.id = us.user_id
+				  JOIN player_stats ps ON ps.user_id = u.id
+				WHERE us.id = $1
+					AND us.archived_at IS NULL
+					AND u.archived_at IS NULL
+					AND ps.archived_at IS NULL`
 
-	var userID string
-	err := database.DB.Get(&userID, query, sessionID)
-	return userID, err
+	err = database.DB.Get(&userDetails, query, sessionID)
+
+	return userDetails, err
 }
 
 func ArchiveUserSession(sessionID string) error {

@@ -54,20 +54,21 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userID, err := dbHelper.GetUserIDByActiveSession(sessionID)
+		sessionUserDetails, err := dbHelper.GetUserAndPlayerIDByActiveSession(sessionID)
 		if err != nil {
 			utils.ErrorResponse(ctx, http.StatusUnauthorized, err, "invalid session")
 			ctx.Abort()
 			return
 		}
 
-		if userID != claimUserID {
+		if sessionUserDetails.UserID != claimUserID {
 			utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("session mismatch"), "invalid session")
 			ctx.Abort()
 			return
 		}
 
-		ctx.Set("user_id", userID)
+		ctx.Set("user_id", sessionUserDetails.UserID)
+		ctx.Set("player_id", sessionUserDetails.PlayerID)
 		ctx.Set("session_id", sessionID)
 
 		ctx.Next()
