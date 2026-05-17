@@ -46,6 +46,7 @@ func SetUpRoutes() *gin.Engine {
 		{
 			profile := v1.Group("/profile")
 			profile.GET("/:playerStatsID", handler.GetPlayerProfile)
+			auth.PUT("profile/me", handler.UpdateProfile)
 		}
 	}
 
