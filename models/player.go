@@ -63,3 +63,9 @@ type PlayerStats struct {
 	CreatedAt  time.Time  `db:"created_at" json:"created_at"`
 	ArchivedAt *time.Time `db:"archived_at" json:"archived_at"`
 }
+
+type UpdateProfileRequest struct {
+	Name         string `json:"name" binding:"required,min=2"`
+	BattingStyle string `json:"batting_style"`
+	BowlingStyle string `json:"bowling_style"`
+}

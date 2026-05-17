@@ -3,6 +3,8 @@ package dbHelper
 import (
 	"crickxi-backend/database"
 	"crickxi-backend/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
 func GetPlayerProfileByID(playerStatsID string) (playerStats models.PlayerStats, err error) {
@@ -60,4 +62,26 @@ func GetPlayerProfileByID(playerStatsID string) (playerStats models.PlayerStats,
 	)
 
 	return playerStats, err
+}
+
+func UpdateUserProfile(tx *sqlx.Tx, userID string, name string, battingStyle string, bowlingStyle string) error {
+	userQuery := `UPDATE users
+				SET
+					name = $1
+					WHERE id = $2`
+
+	_, err := tx.Exec(userQuery, name, userID)
+	if err != nil {
+		return err
+	}
+
+	playerQuery := `UPDATE player_stats
+				SET
+					batting_style = $1,
+					bowling_style = $2,
+					updated_at = NOW()
+				WHERE user_id = $3`
+
+	_, err = tx.Exec(playerQuery, battingStyle, bowlingStyle, userID)
+	return err
 }
