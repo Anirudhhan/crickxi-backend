@@ -35,11 +35,12 @@ func ErrorResponse(ctx *gin.Context, status int, err error, message string) {
 	})
 }
 
-func GenerateAccessToken(userID string, sessionID string) (string, error) {
+func GenerateAccessToken(userID string, playerStatsID string, sessionID string) (string, error) {
 	claims := jwt.MapClaims{
 		"uid": userID,
+		"pid": playerStatsID,
 		"sid": sessionID,
-		"exp": time.Now().Add(time.Hour).Unix(),
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
 		"iat": time.Now().Unix(),
 	}
 

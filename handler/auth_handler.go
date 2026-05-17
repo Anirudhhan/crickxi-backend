@@ -57,7 +57,7 @@ func RegisterUser(ctx *gin.Context) {
 				return
 			}
 		}
-		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, txErr.Error())
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to register user")
 		return
 	}
 
@@ -97,7 +97,7 @@ func LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	accessToken, err := utils.GenerateAccessToken(userDetails.UserID, sessionID)
+	accessToken, err := utils.GenerateAccessToken(userDetails.UserID, userDetails.PlayerID, sessionID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, err.Error())
 		return
@@ -132,7 +132,7 @@ func RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	userID, err := dbHelper.GetUserIDByActiveSession(sessionID)
+	sessionUserDetails, err := dbHelper.GetUserAndPlayerIDByActiveSession(sessionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.ErrorResponse(ctx, http.StatusUnauthorized, err, "invalid session")
@@ -142,10 +142,7 @@ func RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	accessToken, err := utils.GenerateAccessToken(
-		userID,
-		sessionID,
-	)
+	accessToken, err := utils.GenerateAccessToken(sessionUserDetails.UserID, sessionUserDetails.PlayerID, sessionID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to generate token")
 		return

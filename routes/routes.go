@@ -17,6 +17,7 @@ func SetUpRoutes() *gin.Engine {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",
+			"http://192.168.1.13:5173",
 			ipOrigins,
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -43,8 +44,8 @@ func SetUpRoutes() *gin.Engine {
 		auth.PUT("/logout", handler.Logout)
 
 		{
-			profile := auth.Group("/players")
-			profile.GET("/:userID", handler.GetPlayerStats)
+			profile := v1.Group("/profile")
+			profile.GET("/:playerStatsID", handler.GetPlayerProfile)
 		}
 	}
 

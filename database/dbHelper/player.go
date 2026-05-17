@@ -5,7 +5,7 @@ import (
 	"crickxi-backend/models"
 )
 
-func GetPlayerProfileByUserID(userID string) (playerStats models.PlayerStats, err error) {
+func GetPlayerProfileByID(playerStatsID string) (playerStats models.PlayerStats, err error) {
 	query := `
 	SELECT
 		ps.id,
@@ -49,14 +49,14 @@ func GetPlayerProfileByUserID(userID string) (playerStats models.PlayerStats, er
 		ON ps.user_id = u.id
 		AND ps.archived_at IS NULL
 	WHERE
-		u.id = $1
+		ps.id = $1
 		AND u.archived_at IS NULL
 	`
 
 	err = database.DB.Get(
 		&playerStats,
 		query,
-		userID,
+		playerStatsID,
 	)
 
 	return playerStats, err
