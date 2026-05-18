@@ -85,8 +85,12 @@ func LoginUser(ctx *gin.Context) {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, err.Error())
 		return
 	}
+	if userDetails.HashPassword == nil {
+		utils.ErrorResponse(ctx, http.StatusForbidden, errors.New("invalid credentials"), "invalid credentials")
+		return
+	}
 
-	if err := utils.CheckPasswordHash(loginUserReq.Password, userDetails.HashPassword); err != nil {
+	if err := utils.CheckPasswordHash(loginUserReq.Password, *userDetails.HashPassword); err != nil {
 		utils.ErrorResponse(ctx, http.StatusForbidden, err, "invalid credentials")
 		return
 	}

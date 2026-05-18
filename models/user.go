@@ -7,9 +7,9 @@ type RegisterUser struct {
 }
 
 type LoginUserDetails struct {
-	UserID       string `db:"user_id"`
-	PlayerID     string `db:"player_id"`
-	HashPassword string `db:"password"`
+	UserID       string  `db:"user_id"`
+	PlayerID     string  `db:"player_id"`
+	HashPassword *string `db:"password"`
 }
 
 type SessionUserDetails struct {
