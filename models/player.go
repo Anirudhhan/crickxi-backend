@@ -69,3 +69,14 @@ type UpdateProfileRequest struct {
 	BattingStyle string `json:"batting_style"`
 	BowlingStyle string `json:"bowling_style"`
 }
+
+type SearchPlayer struct {
+	PlayerID string `db:"id" json:"playerID"`
+	Name     string `db:"name" json:"name"`
+	Phone    string `db:"phone_no" json:"phone"`
+}
+
+type CreateGuestPlayerRequest struct {
+	Name  string `json:"name" binding:"required,min=2"`
+	Phone string `json:"phone" binding:"required"`
+}
