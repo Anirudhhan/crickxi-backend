@@ -87,7 +87,7 @@ func UpdateUserProfile(tx *sqlx.Tx, userID string, name string, battingStyle str
 }
 
 func SearchPlayers(search string) (players []models.SearchPlayer, err error) {
-	query := `SELECT ps.id, u.name, u.phone_no FROM users u 
+	query := `SELECT ps.id AS player_id, u.id AS user_id, u.name, u.phone_no FROM users u 
 			JOIN player_stats ps
 				ON ps.user_id = u.id
 			WHERE
