@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS matches (
     host_id UUID REFERENCES player_stats(id),
     scorer1_id UUID REFERENCES player_stats(id),
     scorer2_id UUID REFERENCES player_stats(id),
-    match_status match_status DEFAULT 'upcoming',
+    match_status match_status DEFAULT 'live',
     overs_per_side INT DEFAULT 10,
     start_time TIMESTAMPTZ,
     end_time TIMESTAMPTZ,
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     match_id UUID REFERENCES matches(id) NOT NULL,
     name TEXT NOT NULL,
-    created_by UUID REFERENCES users(id),
+    created_by UUID REFERENCES player_stats(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     archived_at TIMESTAMPTZ
 );
