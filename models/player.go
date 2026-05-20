@@ -66,8 +66,8 @@ type PlayerStats struct {
 
 type UpdateProfileRequest struct {
 	Name         string `json:"name" binding:"required,min=2"`
-	BattingStyle string `json:"batting_style"`
-	BowlingStyle string `json:"bowling_style"`
+	BattingStyle string `json:"battingStyle"`
+	BowlingStyle string `json:"bowlingStyle"`
 }
 
 type SearchPlayer struct {
