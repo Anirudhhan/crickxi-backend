@@ -71,7 +71,8 @@ type UpdateProfileRequest struct {
 }
 
 type SearchPlayer struct {
-	PlayerID string `db:"id" json:"playerID"`
+	UserID   string `db:"user_id" json:"userID"`
+	PlayerID string `db:"player_id" json:"playerID"`
 	Name     string `db:"name" json:"name"`
 	Phone    string `db:"phone_no" json:"phone"`
 }

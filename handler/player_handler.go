@@ -15,13 +15,27 @@ import (
 	"github.com/lib/pq"
 )
 
-func GetPlayerProfile(ctx *gin.Context) {
-	userID := ctx.Param("playerStatsID")
+func GetMyProfile(ctx *gin.Context) {
+	playerID := ctx.GetString("player_id")
+	if playerID == "" {
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("missing player id"), "unauthorized")
+		return
+	}
+	playerStats, err := dbHelper.GetPlayerProfileByID(playerID)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
 
-	playerStats, err := dbHelper.GetPlayerProfileByID(userID)
+	ctx.JSON(http.StatusOK, playerStats)
+}
+
+func GetPlayerProfile(ctx *gin.Context) {
+	playerID := ctx.Param("playerStatsID")
+	playerStats, err := dbHelper.GetPlayerProfileByID(playerID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			utils.ErrorResponse(ctx, http.StatusUnauthorized, err, "invalid player id")
+			utils.ErrorResponse(ctx, http.StatusNotFound, err, "invalid player id")
 			return
 		}
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")

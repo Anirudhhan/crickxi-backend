@@ -7,54 +7,26 @@ import (
 )
 
 func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string) (matchData models.MatchData, err error) {
-	// create match
-	matchQuery := `INSERT INTO matches(host_id, scorer1_id, scorer2_id, overs_per_side, start_time)
-					VALUES($1, $2, $3, $4, NOW()) RETURNING id`
-
-	err = tx.Get(&matchData.MatchID, matchQuery, hostID, req.ScorerID1, req.ScorerID2, req.Overs)
-	if err != nil {
-		return matchData, err
-	}
 
 	// create team A
-	teamAQuery := `INSERT INTO teams(match_id,name,created_by)
-					VALUES($1, $2, $3) RETURNING id`
+	teamAQuery := `INSERT INTO teams(name, created_by)
+					VALUES($1, $2) RETURNING id`
 
-	err = tx.Get(&matchData.TeamAID, teamAQuery, matchData.MatchID, req.TeamAName, hostID)
+	err = tx.Get(&matchData.TeamAID, teamAQuery, req.TeamAName, hostID)
 	if err != nil {
 		return matchData, err
 	}
 
 	// create team B
-	teamBQuery := `INSERT INTO teams(match_id,name,created_by)
-					VALUES($1, $2, $3) RETURNING id`
+	teamBQuery := `INSERT INTO teams(name, created_by)
+					VALUES($1, $2) RETURNING id`
 
-	err = tx.Get(&matchData.TeamBID, teamBQuery, matchData.MatchID, req.TeamBName, hostID)
+	err = tx.Get(&matchData.TeamBID, teamBQuery, req.TeamBName, hostID)
 	if err != nil {
 		return matchData, err
 	}
 
-	teamPlayerQuery := `INSERT INTO team_players(team_id, player_id, is_captain)
-						VALUES($1, $2, $3)`
-	// adding team A players
-	for _, player := range req.TeamAPlayers {
-
-		_, err = tx.Exec(teamPlayerQuery, matchData.TeamAID, player.PlayerID, player.IsCaptain)
-		if err != nil {
-			return matchData, err
-		}
-	}
-
-	// adding team B players
-	for _, player := range req.TeamBPlayers {
-
-		_, err = tx.Exec(teamPlayerQuery, matchData.TeamBID, player.PlayerID, player.IsCaptain)
-		if err != nil {
-			return matchData, err
-		}
-	}
-
-	// decide toss winner team id
+	// decide toss winner
 	var tossWinnerTeamID string
 
 	if req.TossWinner == "A" {
@@ -63,15 +35,75 @@ func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string) (mat
 		tossWinnerTeamID = matchData.TeamBID
 	}
 
-	// update toss details
-	updateMatchQuery := `UPDATE matches
-					SET toss_winner_team_id = $1, toss_decision = $2
-					WHERE id = $3`
+	// create match
+	matchQuery := `INSERT INTO matches(
+			toss_winner_team_id, team_a_id, team_b_id, toss_decision, host_id,
+			scorer1_id,	scorer2_id, current_inning_no, overs_per_side, match_status, start_time)
+			VALUES($1, $2, $3, $4, $5, $6, $7, 1, $8, 'upcoming', NOW()) RETURNING id`
 
-	_, err = tx.Exec(updateMatchQuery, tossWinnerTeamID, req.TossDecision, matchData.MatchID)
+	err = tx.Get(&matchData.MatchID, matchQuery, tossWinnerTeamID, matchData.TeamAID, matchData.TeamBID, req.TossDecision, hostID, req.ScorerID1, req.ScorerID2, req.Overs)
 	if err != nil {
 		return matchData, err
 	}
 
+	// insert team players
+	teamPlayerQuery := `INSERT INTO team_players(team_id, player_id, is_captain)
+						VALUES($1, $2, $3)`
+
+	// team A players
+	for _, player := range req.TeamAPlayers {
+
+		_, err = tx.Exec(teamPlayerQuery, matchData.TeamAID, player.PlayerID, player.IsCaptain)
+		if err != nil {
+			return matchData, err
+		}
+	}
+
+	// team B players
+	for _, player := range req.TeamBPlayers {
+
+		_, err = tx.Exec(teamPlayerQuery, matchData.TeamBID, player.PlayerID, player.IsCaptain)
+		if err != nil {
+			return matchData, err
+		}
+	}
+
 	return matchData, nil
 }
+
+//{
+//"matchID": "uuid",
+//
+//"matchStatus": "live",
+//
+//"teamA": {
+//"name": "Thunder Bolts",
+//"shortName": "TB",
+//"score": "142/2",
+//"overs": "28.4"
+//},
+//
+//"teamB": {
+//"teamID": "uuid",
+//"name": "Knight Riders",
+//"shortName": "KR"
+//},
+//
+//"currentRunRate": 4.95,
+//
+//"target": 288,
+//
+//"striker": {
+//"playerID": "uuid",
+//"name": "Babar Azam",
+//"runs": 68,
+//"balls": 84
+//},
+//
+//"bowler": {
+//"playerID": "uuid",
+//"name": "Ravindra Jadeja",
+//"wickets": 1,
+//"runsGiven": 28
+//}
+//}

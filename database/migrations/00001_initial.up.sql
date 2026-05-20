@@ -131,14 +131,26 @@ CREATE TABLE IF NOT EXISTS player_stats (
 CREATE INDEX IF NOT EXISTS idx_players_user_id
     ON player_stats(user_id);
 
+CREATE TABLE IF NOT EXISTS teams (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     name TEXT NOT NULL,
+     created_by UUID REFERENCES users(id),
+     created_at TIMESTAMPTZ DEFAULT NOW(),
+     archived_at TIMESTAMPTZ
+);
+
+
 CREATE TABLE IF NOT EXISTS matches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     toss_winner_team_id UUID,
+    team_a_id UUID REFERENCES teams(id),
+    team_b_id UUID REFERENCES teams(id),
     winner_team_id UUID,
     toss_decision toss_decision,
-    host_id UUID REFERENCES player_stats(id),
-    scorer1_id UUID REFERENCES player_stats(id),
-    scorer2_id UUID REFERENCES player_stats(id),
+    host_id UUID REFERENCES users(id),
+    scorer1_id UUID REFERENCES users(id),
+    scorer2_id UUID REFERENCES users(id),
+    current_inning_no INT NOT NULL,
     match_status match_status DEFAULT 'live',
     overs_per_side INT DEFAULT 10,
     start_time TIMESTAMPTZ,
@@ -148,24 +160,15 @@ CREATE TABLE IF NOT EXISTS matches (
     archived_at TIMESTAMPTZ
 );
 
-CREATE TABLE IF NOT EXISTS teams (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    match_id UUID REFERENCES matches(id) NOT NULL,
-    name TEXT NOT NULL,
-    created_by UUID REFERENCES player_stats(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    archived_at TIMESTAMPTZ
-);
-
+ALTER TABLE matches
+    ADD CONSTRAINT chk_different_teams
+        CHECK (team_a_id != team_b_id);
 
 CREATE INDEX IF NOT EXISTS idx_matches_status
     ON matches(match_status);
 
 CREATE INDEX IF NOT EXISTS idx_matches_created_at
     ON matches(created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_teams_match_id
-    ON teams(match_id);
 
 ALTER TABLE matches
     ADD CONSTRAINT fk_matches_toss_team

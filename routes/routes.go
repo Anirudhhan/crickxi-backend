@@ -28,6 +28,7 @@ func SetUpRoutes() *gin.Engine {
 
 	v1 := router.Group("/v1")
 
+	// public routes
 	{
 		v1.GET("/health", func(ctx *gin.Context) {
 			ctx.JSON(http.StatusOK, gin.H{
@@ -40,23 +41,25 @@ func SetUpRoutes() *gin.Engine {
 		v1.POST("/reset-password", handler.ResetPassword)
 		v1.GET("/refresh", handler.RefreshToken)
 
-		auth := v1.Group("/")
-		auth.Use(middleware.AuthMiddleware())
+		v1.GET("/players/search", handler.SearchPlayer)
+
+		v1.GET("/profile/:playerStatsID", handler.GetPlayerProfile)
+	}
+
+	// protected routes
+	auth := v1.Group("/")
+	auth.Use(middleware.AuthMiddleware())
+
+	{
 		auth.PUT("/logout", handler.Logout)
 
-		{
-			profile := v1.Group("/profile")
-			profile.GET("/:playerStatsID", handler.GetPlayerProfile)
-			v1.GET("/players/search", handler.SearchPlayer)
-			auth.PUT("/profile/me", handler.UpdateProfile)
-			auth.POST("/players", handler.CreateGuestPlayer)
-		}
+		auth.GET("/profile/me", handler.GetMyProfile)
 
-		{
-			//matches := v1.Group("/matches")
-			//auth = matches.Group("/")
-			auth.POST("/matches", handler.CreateMatch)
-		}
+		auth.PUT("/profile/me", handler.UpdateProfile)
+
+		auth.POST("/players", handler.CreateGuestPlayer)
+
+		auth.POST("/matches", handler.CreateMatch)
 	}
 
 	return router
