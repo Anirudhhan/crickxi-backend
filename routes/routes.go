@@ -18,7 +18,8 @@ func SetUpRoutes() *gin.Engine {
 		AllowOrigins: []string{
 			"http://localhost:5173",
 			"http://192.168.1.13:5173",
-			"http://192.168.0.245:5173",
+			"http://192.168.0.245:5173", "http://192.168.1.13:5174",
+			"http://192.168.0.245:5174",
 			ipOrigins,
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -44,6 +45,8 @@ func SetUpRoutes() *gin.Engine {
 		v1.GET("/players/search", handler.SearchPlayer)
 
 		v1.GET("/profile/:playerStatsID", handler.GetPlayerProfile)
+
+		v1.GET("/matches", handler.GetMatches)
 	}
 
 	// protected routes

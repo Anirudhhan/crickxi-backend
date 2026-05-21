@@ -40,7 +40,7 @@ func GenerateAccessToken(userID string, playerStatsID string, sessionID string) 
 		"uid": userID,
 		"pid": playerStatsID,
 		"sid": sessionID,
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
+		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
 		"iat": time.Now().Unix(),
 	}
 
