@@ -7,7 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func RegisterUser(tx *sqlx.Tx, name string, phone string, hashedPassword string) (userID string, err error) {
+func RegisterUser(tx *sqlx.Tx, name string, phone string, hashedPassword *string) (userID string, err error) {
 	query := `INSERT INTO users(name, phone_no, password) 
 	          VALUES ($1, $2, $3) 
 	          RETURNING id`
@@ -16,7 +16,7 @@ func RegisterUser(tx *sqlx.Tx, name string, phone string, hashedPassword string)
 	return userID, err
 }
 
-func RegisterPlayerStats(tx *sqlx.Tx, userID string) (playerID string, err error) {
+func CreatePlayerStats(tx *sqlx.Tx, userID string) (playerID string, err error) {
 	query := `INSERT INTO player_stats(user_id) 
 	          VALUES ($1) 
 	          RETURNING id`

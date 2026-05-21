@@ -35,12 +35,12 @@ func RegisterUser(ctx *gin.Context) {
 	var userID string
 	var playerID string
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
-		userID, err = dbHelper.RegisterUser(tx, registerUserReq.Name, registerUserReq.Phone, hashedPassword)
+		userID, err = dbHelper.RegisterUser(tx, registerUserReq.Name, registerUserReq.Phone, &hashedPassword)
 		if err != nil {
 			return err
 		}
 
-		playerID, err = dbHelper.RegisterPlayerStats(tx, userID)
+		playerID, err = dbHelper.CreatePlayerStats(tx, userID)
 		if err != nil {
 			return err
 		}

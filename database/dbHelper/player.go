@@ -67,7 +67,7 @@ func GetPlayerProfileByID(playerStatsID string) (playerStats models.PlayerStats,
 func UpdateUserProfile(tx *sqlx.Tx, userID string, name string, battingStyle string, bowlingStyle string) error {
 	userQuery := `UPDATE users
 				SET
-					name = $1
+					name = $1, updated_at = NOW()
 					WHERE id = $2`
 
 	_, err := tx.Exec(userQuery, name, userID)
@@ -97,24 +97,4 @@ func SearchPlayers(search string) (players []models.SearchPlayer, err error) {
 
 	err = database.DB.Select(&players, query, search, search)
 	return players, err
-}
-
-func CreateGuestPlayer(tx *sqlx.Tx, name string, phone string) (userID string, playerID string, err error) {
-	userQuery := `INSERT INTO users(name, phone_no)
-					VALUES($1, $2) RETURNING id`
-
-	err = tx.Get(&userID, userQuery, name, phone)
-	if err != nil {
-		return "", "", err
-	}
-
-	playerQuery := `INSERT INTO player_stats(user_id)
-					VALUES($1) RETURNING id`
-
-	err = tx.Get(&playerID, playerQuery, userID)
-	if err != nil {
-		return "", "", err
-	}
-
-	return userID, playerID, nil
 }

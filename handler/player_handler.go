@@ -91,6 +91,7 @@ func SearchPlayer(ctx *gin.Context) {
 }
 
 func CreateGuestPlayer(ctx *gin.Context) {
+
 	var req models.CreateGuestPlayerRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
@@ -102,8 +103,13 @@ func CreateGuestPlayer(ctx *gin.Context) {
 
 	err := database.Tx(func(tx *sqlx.Tx) error {
 		var txErr error
-		userID, playerID, txErr =
-			dbHelper.CreateGuestPlayer(tx, req.Name, req.Phone)
+
+		userID, txErr = dbHelper.RegisterUser(tx, req.Name, req.Phone, nil)
+		if txErr != nil {
+			return txErr
+		}
+
+		playerID, txErr = dbHelper.CreatePlayerStats(tx, userID)
 		return txErr
 	})
 
