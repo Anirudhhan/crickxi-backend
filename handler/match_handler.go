@@ -42,3 +42,15 @@ func CreateMatch(ctx *gin.Context) {
 		"message": "match created successfully",
 		"data":    matchData})
 }
+
+func GetMatches(ctx *gin.Context) {
+	matches, err := dbHelper.GetMatches()
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get matches")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"matches": matches,
+	})
+}
