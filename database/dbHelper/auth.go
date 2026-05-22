@@ -69,6 +69,17 @@ func ArchiveUserSession(sessionID string) error {
 	return err
 }
 
+func UserExistByPhone(phone string) (userExist bool, err error) {
+	var count int
+
+	query := `SELECT COUNT(*) FROM users
+				WHERE phone_no = $1 AND archived_at IS NULL`
+
+	err = database.DB.Get(&count, query, phone)
+
+	return count > 0, err
+}
+
 func UpdateUserPassword(tx *sqlx.Tx, phone string, hashedPassword string) (userID string, err error) {
 	query := `UPDATE users
 				SET password = $1, updated_at = NOW()

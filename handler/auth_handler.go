@@ -157,6 +157,32 @@ func RefreshToken(ctx *gin.Context) {
 	})
 }
 
+func RequestPasswordReset(ctx *gin.Context) {
+	var req struct {
+		PhoneNo string `json:"phone" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
+		return
+	}
+
+	userExist, err := dbHelper.UserExistByPhone(req.PhoneNo)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
+
+	if !userExist {
+		utils.ErrorResponse(ctx, http.StatusNotFound, errors.New("user not found"), "user not found")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "otp sent successfully",
+	})
+}
+
 func ResetPassword(ctx *gin.Context) {
 	var userReq struct {
 		PhoneNo     string `db:"phone_no" json:"phone" binding:"required"`
@@ -194,11 +220,6 @@ func ResetPassword(ctx *gin.Context) {
 	})
 
 	if txErr != nil {
-
-		if errors.Is(txErr, sql.ErrNoRows) {
-			utils.ErrorResponse(ctx, http.StatusNotFound, txErr, "user not found")
-			return
-		}
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to update password")
 		return
 	}
