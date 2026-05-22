@@ -5,6 +5,7 @@ import (
 	"crickxi-backend/database/dbHelper"
 	"crickxi-backend/models"
 	"crickxi-backend/utils"
+	"database/sql"
 	"errors"
 	"net/http"
 
@@ -91,4 +92,25 @@ func GetMatches(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"matches": matches,
 	})
+}
+
+func GetMatchByID(ctx *gin.Context) {
+	matchID := ctx.Param("matchID")
+	if matchID == "" {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("match id is required"), "match id is required")
+		return
+	}
+
+	matchCard, err := dbHelper.GetMatchByID(matchID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.ErrorResponse(ctx, http.StatusNotFound, err, "invalid player id")
+			return
+		}
+
+		utils.ErrorResponse(ctx, http.StatusNotFound, err, "internal server error")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, matchCard)
 }

@@ -46,6 +46,7 @@ func SetUpRoutes() *gin.Engine {
 		v1.GET("/profile/:playerStatsID", handler.GetPlayerProfile)
 
 		v1.GET("/matches", handler.GetMatches)
+		v1.GET("/match/:matchID", handler.GetMatchByID)
 	}
 
 	// protected routes
