@@ -14,33 +14,71 @@ import (
 
 func CreateMatch(ctx *gin.Context) {
 	var createMatchReq models.CreateMatchRequest
+
 	hostID := ctx.GetString("user_id")
+	if hostID == "" {
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("missing user id"), "unauthorized")
+		return
+	}
 
 	if err := ctx.ShouldBindJSON(&createMatchReq); err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
 	}
 
-	if hostID == "" {
-		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("missing player id"), "unauthorized")
-		return
-	}
-
 	var matchData models.MatchData
-	err := database.Tx(func(tx *sqlx.Tx) error {
-		var txErr error
-		matchData, txErr = dbHelper.CreateMatch(tx, createMatchReq, hostID)
-		return txErr
+
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+
+		teamAID, err := dbHelper.CreateTeam(tx, createMatchReq.TeamAName, hostID)
+		if err != nil {
+			return err
+		}
+
+		matchData.TeamAID = teamAID
+
+		teamBID, err := dbHelper.CreateTeam(tx, createMatchReq.TeamBName, hostID)
+		if err != nil {
+			return err
+		}
+
+		matchData.TeamBID = teamBID
+
+		err = dbHelper.AddPlayersToTeam(tx, teamAID, createMatchReq.TeamAPlayers)
+		if err != nil {
+			return err
+		}
+
+		err = dbHelper.AddPlayersToTeam(tx, teamBID, createMatchReq.TeamBPlayers)
+		if err != nil {
+			return err
+		}
+
+		var tossWinnerTeamID string
+		if createMatchReq.TossWinner == "A" {
+			tossWinnerTeamID = teamAID
+		} else {
+			tossWinnerTeamID = teamBID
+		}
+
+		matchID, err := dbHelper.CreateMatch(tx, createMatchReq, hostID, tossWinnerTeamID, teamAID, teamBID)
+		if err != nil {
+			return err
+		}
+
+		matchData.MatchID = matchID
+		return nil
 	})
 
-	if err != nil {
-		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to create match")
+	if txErr != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to create match")
 		return
 	}
 
 	ctx.JSON(http.StatusCreated, gin.H{
 		"message": "match created successfully",
-		"data":    matchData})
+		"data":    matchData,
+	})
 }
 
 func GetMatches(ctx *gin.Context) {
