@@ -39,10 +39,9 @@ func SetUpRoutes() *gin.Engine {
 
 		v1.POST("/register", handler.RegisterUser)
 		v1.POST("/login", handler.LoginUser)
+		v1.POST("/request-password-reset", handler.RequestPasswordReset)
 		v1.POST("/reset-password", handler.ResetPassword)
 		v1.GET("/refresh", handler.RefreshToken)
-
-		v1.GET("/players/search", handler.SearchPlayer)
 
 		v1.GET("/profile/:playerStatsID", handler.GetPlayerProfile)
 
@@ -60,9 +59,11 @@ func SetUpRoutes() *gin.Engine {
 
 		auth.PUT("/profile/me", handler.UpdateProfile)
 
-		auth.POST("/players", handler.CreateGuestPlayer)
+		auth.POST("/player", handler.CreateGuestPlayer)
 
-		auth.POST("/matches", handler.CreateMatch)
+		auth.GET("/players/search", handler.SearchPlayer)
+
+		auth.POST("/match", handler.CreateMatch)
 	}
 
 	return router
