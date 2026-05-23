@@ -10,9 +10,10 @@ type Player struct {
 }
 
 type MatchData struct {
-	MatchID string
-	TeamAID string
-	TeamBID string
+	MatchID         string
+	CurrentInningID string
+	TeamAID         string
+	TeamBID         string
 }
 
 type CreateMatchRequest struct {
@@ -27,6 +28,12 @@ type CreateMatchRequest struct {
 
 	TeamAPlayers []Player `json:"teamAPlayers"`
 	TeamBPlayers []Player `json:"teamBPlayers"`
+
+	StrikerID       string  `json:"strikerID"`
+	NonStrikerID    string  `json:"nonStrikerID"`
+	CurrentBowlerID string  `json:"currentBowlerID"`
+	WicketKeeperID  *string `json:"wicketKeeperID"`
+	StartTime       *string `json:"startTime"`
 
 	TossWinner   string `json:"tossWinner"`
 	TossDecision string `json:"tossDecision"`

@@ -35,13 +35,59 @@ func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string, toss
 	query := `
 		INSERT INTO matches(toss_winner_team_id, team_a_id, team_b_id, toss_decision, host_id, 
 		                    scorer1_id, scorer2_id, current_inning_no, overs_per_side, match_status, start_time)
-		VALUES($1, $2, $3, $4, $5, $6, $7, 1, $8, 'upcoming', NOW())
+		VALUES($1, $2, $3, $4, $5, $6, $7, 1, $8, 'live', NOW())
+-- 		TODO: take start time from user and match_status
 		RETURNING id`
 
 	err = tx.Get(&matchID, query, tossWinnerTeamID, teamAID, teamBID, req.TossDecision,
 		hostID, req.ScorerID1, req.ScorerID2, req.Overs)
 
 	return matchID, err
+}
+
+func StartInning(tx *sqlx.Tx, matchID string, battingTeamID string, bowlingTeamID string, inningsOrder int, inningsType string) (InningID string, err error) {
+	query := `INSERT INTO innings(match_id, batting_team_id, bowling_team_id, innings_order, innings_type) 
+				VALUES ($1, $2, $3, $4, $5) RETURNING id`
+
+	err = tx.Get(&InningID, query, matchID, battingTeamID, bowlingTeamID, inningsOrder, inningsType)
+	return InningID, err
+}
+
+func CreateBattingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {
+
+	query := `INSERT INTO batting_scorecards(innings_id,player_id)
+				VALUES($1, $2)`
+
+	for _, player := range players {
+		_, err := tx.Exec(query, inningID, player.PlayerID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func CreateBowlingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {
+
+	query := `INSERT INTO bowling_scorecards(innings_id,player_id)
+				VALUES($1, $2)`
+
+	for _, player := range players {
+		_, err := tx.Exec(query, inningID, player.PlayerID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func StartLiveMatch(tx *sqlx.Tx, matchID string, inningID string, req models.CreateMatchRequest) (err error) {
+	query := `INSERT INTO live_match(match_id, current_inning_id, striker_id, non_striker_id, current_bowler_id)
+				VALUES ($1, $2, $3,$4, $5)`
+
+	_, err = tx.Exec(query, matchID, inningID, req.StrikerID, req.NonStrikerID, req.CurrentBowlerID)
+	return err
 }
 
 func GetMatches() (matches []models.MatchCard, err error) {
