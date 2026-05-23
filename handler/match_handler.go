@@ -27,6 +27,13 @@ func CreateMatch(ctx *gin.Context) {
 		return
 	}
 
+	if createMatchReq.StrikerID == createMatchReq.CurrentBowlerID || createMatchReq.NonStrikerID == createMatchReq.CurrentBowlerID {
+		utils.ErrorResponse(ctx, http.StatusBadRequest,
+			errors.New("bowler cannot be striker or non striker same time"),
+			"bowler cannot be striker or non striker same time")
+		return
+	}
+
 	var matchData models.MatchData
 
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
@@ -56,18 +63,65 @@ func CreateMatch(ctx *gin.Context) {
 		}
 
 		var tossWinnerTeamID string
+		var tossLostTeamID string
+		var tossWinnerPlayers []models.Player
+		var tossLostPlayers []models.Player
 		if createMatchReq.TossWinner == "A" {
 			tossWinnerTeamID = teamAID
+			tossWinnerPlayers = createMatchReq.TeamAPlayers
+			tossLostTeamID = teamBID
+			tossLostPlayers = createMatchReq.TeamBPlayers
 		} else {
 			tossWinnerTeamID = teamBID
+			tossWinnerPlayers = createMatchReq.TeamBPlayers
+			tossLostTeamID = teamAID
+			tossLostPlayers = createMatchReq.TeamAPlayers
+
 		}
 
 		matchID, err := dbHelper.CreateMatch(tx, createMatchReq, hostID, tossWinnerTeamID, teamAID, teamBID)
 		if err != nil {
 			return err
 		}
-
 		matchData.MatchID = matchID
+
+		var battingTeamID string
+		var bowlingTeamID string
+		var battingPlayers []models.Player
+		var bowlingPlayers []models.Player
+		if createMatchReq.TossDecision == "bat" {
+			battingTeamID = tossWinnerTeamID
+			battingPlayers = tossWinnerPlayers
+			bowlingTeamID = tossLostTeamID
+			bowlingPlayers = tossLostPlayers
+		} else {
+			battingTeamID = tossLostTeamID
+			battingPlayers = tossLostPlayers
+			bowlingTeamID = tossWinnerTeamID
+			bowlingPlayers = tossWinnerPlayers
+		}
+
+		inningID, err := dbHelper.StartInning(tx, matchData.MatchID, battingTeamID, bowlingTeamID, 1, "normal")
+		if err != nil {
+			return err
+		}
+		matchData.CurrentInningID = inningID
+
+		err = dbHelper.CreateBattingScorecards(tx, matchData.CurrentInningID, battingPlayers)
+		if err != nil {
+			return err
+		}
+
+		err = dbHelper.CreateBowlingScorecards(tx, inningID, bowlingPlayers)
+		if err != nil {
+			return err
+		}
+
+		err = dbHelper.StartLiveMatch(tx, matchData.MatchID, matchData.CurrentInningID, createMatchReq)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 
