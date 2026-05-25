@@ -302,6 +302,8 @@ CREATE TABLE IF NOT EXISTS live_match (
     current_score INT DEFAULT 0,
     wickets INT DEFAULT 0,
     legal_balls INT DEFAULT 0,
+    current_ball_sequence INT DEFAULT 0,
+    is_free_hit BOOLEAN DEFAULT FALSE,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

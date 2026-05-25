@@ -93,3 +93,15 @@ type MatchCard struct {
 	BowlerLegalBalls *int    `db:"bowler_legal_balls" json:"bowlerLegalBalls"`
 	BowlerWickets    *int    `db:"bowler_wickets" json:"bowlerWickets"`
 }
+
+type LiveMatchDetails struct {
+	CurrentInningID     string `db:"current_inning_id"`
+	StrikerID           string `db:"striker_id"`
+	NonStrikerID        string `db:"non_striker_id"`
+	CurrentBowlerID     string `db:"current_bowler_id"`
+	LegalBalls          int    `db:"legal_balls"`
+	CurrentBallSequence int    `db:"current_ball_sequence"`
+	CurrentScore        int    `db:"current_score"`
+	Wickets             int    `db:"wickets"`
+	IsFreeHit           bool   `db:"is_free_hit"`
+}
