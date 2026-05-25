@@ -243,3 +243,13 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 	err = database.DB.Get(&matchCard, query, matchID)
 	return matchCard, err
 }
+
+func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails, err error) {
+	query := `SELECT lm.current_inning_id, lm.striker_id, lm.non_striker_id, lm.current_bowler_id, 
+       		  lm.legal_balls, lm.current_ball_sequence, lm.current_score, lm.wickets, lm.is_free_hit
+				FROM live_match lm
+				WHERE lm.match_id = $1`
+
+	err = database.DB.Get(&liveMatchData, query, matchID)
+	return liveMatchData, err
+}
