@@ -294,3 +294,33 @@ func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails,
 	err = database.DB.Get(&liveMatchData, query, matchID)
 	return liveMatchData, err
 }
+
+func ResetLiveMatchForNextInnings(tx *sqlx.Tx, matchID string, inningID string, req models.StartNextInningsReq) error {
+
+	query := `UPDATE live_match
+				SET
+					current_inning_id = $1,
+					current_score = 0,
+					wickets = 0,
+					legal_balls = 0,
+					current_ball_sequence = 0,
+					striker_id = $2,
+					non_striker_id = $3,
+					current_bowler_id = $4,
+					is_free_hit = false,
+					updated_at = NOW()
+				WHERE match_id = $5`
+
+	_, err := tx.Exec(query, inningID, req.StrikerID, req.NonStrikerID, req.BowlerID, matchID)
+	return err
+}
+
+func UpdateMatchInningNo(tx *sqlx.Tx, matchID string, inningNo int) error {
+	query := `UPDATE matches
+				SET
+					current_inning_no = $1,	updated_at = NOW()
+				WHERE id = $2`
+
+	_, err := tx.Exec(query, inningNo, matchID)
+	return err
+}
