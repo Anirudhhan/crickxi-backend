@@ -30,7 +30,7 @@ type CreateMatchRequest struct {
 	TeamBPlayers []Player `json:"teamBPlayers"`
 
 	StrikerID       string  `json:"strikerID"`
-	NonStrikerID    string  `json:"nonStrikerID"`
+	NonStrikerID    *string `json:"nonStrikerID"`
 	CurrentBowlerID string  `json:"currentBowlerID"`
 	WicketKeeperID  *string `json:"wicketKeeperID"`
 	StartTime       *string `json:"startTime"`
@@ -117,7 +117,7 @@ type LiveMatchDetails struct {
 }
 
 type StartNextInningsReq struct {
-	StrikerID    string `json:"strikerID"`
-	NonStrikerID string `json:"nonStrikerID"`
-	BowlerID     string `json:"bowlerID"`
+	StrikerID    string  `json:"strikerID"`
+	NonStrikerID *string `json:"nonStrikerID"`
+	BowlerID     string  `json:"bowlerID"`
 }

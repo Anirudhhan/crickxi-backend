@@ -21,10 +21,14 @@ func CreateMatch(ctx *gin.Context) {
 		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("missing user id"), "unauthorized")
 		return
 	}
+	if err := ctx.ShouldBindJSON(&createMatchReq); err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
+		return
+	}
 
 	{
-		if createMatchReq.StrikerID == createMatchReq.NonStrikerID {
-			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker and non striker cannot be same"), "striker and non striker cannot be same")
+		if createMatchReq.StrikerID == "" {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker is required"), "striker id is required")
 			return
 		}
 
@@ -32,23 +36,17 @@ func CreateMatch(ctx *gin.Context) {
 			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be striker"), "bowler cannot be striker")
 			return
 		}
+		if createMatchReq.NonStrikerID != nil {
+			if createMatchReq.StrikerID == *createMatchReq.NonStrikerID {
+				utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker and non striker cannot be same"), "striker and non striker cannot be same")
+				return
+			}
 
-		if createMatchReq.NonStrikerID == createMatchReq.CurrentBowlerID {
-			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be non striker"), "bowler cannot be non striker")
-			return
+			if *createMatchReq.NonStrikerID == createMatchReq.CurrentBowlerID {
+				utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be non striker"), "bowler cannot be non striker")
+				return
+			}
 		}
-	}
-
-	if err := ctx.ShouldBindJSON(&createMatchReq); err != nil {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
-		return
-	}
-
-	if createMatchReq.StrikerID == createMatchReq.CurrentBowlerID || createMatchReq.NonStrikerID == createMatchReq.CurrentBowlerID {
-		utils.ErrorResponse(ctx, http.StatusBadRequest,
-			errors.New("bowler cannot be striker or non striker same time"),
-			"bowler cannot be striker or non striker same time")
-		return
 	}
 
 	var matchData models.MatchData
@@ -194,21 +192,23 @@ func StartNextInnings(ctx *gin.Context) {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
 	}
-	//TODO: take out later
+	//TODO: take out later also put it in new bowler selection (ballevents) (common player)
 	{
-		if nextInningReq.StrikerID == nextInningReq.NonStrikerID {
-			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker and non striker cannot be same"), "striker and non striker cannot be same")
-			return
-		}
 
 		if nextInningReq.StrikerID == nextInningReq.BowlerID {
 			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be striker"), "bowler cannot be striker")
 			return
 		}
 
-		if nextInningReq.NonStrikerID == nextInningReq.BowlerID {
-			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be non striker"), "bowler cannot be non striker")
-			return
+		if nextInningReq.NonStrikerID != nil {
+			if nextInningReq.StrikerID == *nextInningReq.NonStrikerID {
+				utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker and non striker cannot be same"), "striker and non striker cannot be same")
+				return
+			}
+			if *nextInningReq.NonStrikerID == nextInningReq.BowlerID {
+				utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be non striker"), "bowler cannot be non striker")
+				return
+			}
 		}
 	}
 
