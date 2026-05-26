@@ -241,3 +241,55 @@ func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string) erro
 	_, err := tx.Exec(query, totalRuns, wickets, legalBalls, strikerID, nonStrikerID, delivery.BowlerID, nextFreeHit, matchID)
 	return err
 }
+
+func HandleInningsOrMatchCompletion(tx *sqlx.Tx, matchData models.LiveMatchDetails, matchID string) error {
+
+	err := CompleteInnings(tx, matchData.CurrentInningID)
+	if err != nil {
+		return err
+	}
+
+	// second innings, match completed
+	if matchData.CurrentInningNo == 2 {
+		var winnerTeamID *string
+		if matchData.PreviousInningsScore != nil {
+			if matchData.CurrentScore > *matchData.PreviousInningsScore {
+				winnerTeamID = &matchData.BattingTeamID
+
+			} else if matchData.CurrentScore < *matchData.PreviousInningsScore {
+				winnerTeamID = &matchData.BowlingTeamID
+			}
+		}
+
+		err = CompleteMatch(tx, matchID, winnerTeamID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func CompleteInnings(tx *sqlx.Tx, inningsID string) error {
+	query := `UPDATE innings
+			SET
+				is_completed = true,
+				updated_at = NOW()
+		WHERE id = $1`
+
+	_, err := tx.Exec(query, inningsID)
+	return err
+}
+
+func CompleteMatch(tx *sqlx.Tx, matchID string, winnerTeamID *string) error {
+	query := `UPDATE matches
+				SET
+					match_status = 'completed',
+					winner_team_id = $1,
+					end_time = NOW(),
+					updated_at = NOW()
+				WHERE id = $2`
+
+	_, err := tx.Exec(query, winnerTeamID, matchID)
+	return err
+}

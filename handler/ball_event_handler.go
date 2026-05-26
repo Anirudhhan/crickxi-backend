@@ -7,6 +7,7 @@ import (
 	"crickxi-backend/utils"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -37,12 +38,26 @@ func BallEvent(ctx *gin.Context) {
 		return
 	}
 
+	if liveMatchData.EndTime != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("match already completed"), "match already completed")
+		return
+	}
+
+	if liveMatchData.IsCompleted {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("innings completed start next innings"), "innings completed start next innings")
+		return
+	}
+
 	var delivery models.Delivery
 
 	delivery.InningsID = liveMatchData.CurrentInningID
 	delivery.StrikerID = liveMatchData.StrikerID
 	delivery.NonStrikerID = liveMatchData.NonStrikerID
-	delivery.BowlerID = liveMatchData.CurrentBowlerID
+	if req.NextBowlerID != nil {
+		delivery.BowlerID = *req.NextBowlerID
+	} else {
+		delivery.BowlerID = liveMatchData.CurrentBowlerID
+	}
 	delivery.LegalBalls = liveMatchData.LegalBalls
 
 	delivery.BallSequence = liveMatchData.CurrentBallSequence + 1
@@ -103,6 +118,8 @@ func BallEvent(ctx *gin.Context) {
 		return
 	}
 
+	matchEnded := false
+	inningEnded := false
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
 
 		err := dbHelper.CreateBallEvent(tx, delivery)
@@ -130,11 +147,82 @@ func BallEvent(ctx *gin.Context) {
 			return err
 		}
 
+		// Match Completion handling
+		{
+			if liveMatchData.PreviousInningsScore != nil {
+				//handle score chased
+				liveMatchData.CurrentScore += delivery.RunsExtra + delivery.RunsBatter
+				target := *liveMatchData.PreviousInningsScore
+				if liveMatchData.CurrentScore > target {
+					err = dbHelper.HandleInningsOrMatchCompletion(tx, liveMatchData, matchID)
+					if err != nil {
+						return err
+					}
+
+					if liveMatchData.CurrentInningNo == 1 {
+						inningEnded = true
+					} else {
+						matchEnded = true
+					}
+
+					return nil
+				}
+			}
+			if delivery.IsWicket {
+				//handle wicket ended
+				// TODO: Later handle hurt out
+				currentWickets := liveMatchData.Wickets + 1
+				if currentWickets >= liveMatchData.BattingPlayerCount {
+					err = dbHelper.HandleInningsOrMatchCompletion(tx, liveMatchData, matchID)
+					if err != nil {
+						return err
+					}
+
+					if liveMatchData.CurrentInningNo == 1 {
+						inningEnded = true
+					} else {
+						matchEnded = true
+					}
+
+					return nil
+				}
+			}
+
+			//handle over/inning ended
+			currentLegalBalls := liveMatchData.LegalBalls
+			if delivery.IsLegalDelivery {
+				currentLegalBalls++
+			}
+			fmt.Println("current legal", currentLegalBalls, "----- overperside", liveMatchData.OversPerSide*6)
+			if currentLegalBalls >= liveMatchData.OversPerSide*6 {
+				err = dbHelper.HandleInningsOrMatchCompletion(tx, liveMatchData, matchID)
+				if err != nil {
+					return err
+				}
+
+				if liveMatchData.CurrentInningNo == 1 {
+					inningEnded = true
+				} else {
+					matchEnded = true
+				}
+				return nil
+			}
+		}
+
 		return nil
 	})
 
 	if txErr != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to add ball")
+		return
+	}
+
+	if inningEnded {
+		ctx.JSON(http.StatusOK, gin.H{"message": "inning ended start new inning"})
+		return
+	}
+	if matchEnded {
+		ctx.JSON(http.StatusOK, gin.H{"message": "match ended"})
 		return
 	}
 
