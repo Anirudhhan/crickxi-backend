@@ -106,16 +106,18 @@ func BallEvent(ctx *gin.Context) {
 		return
 	}
 
-	isNonStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, delivery.NonStrikerID)
+	if delivery.NonStrikerID != nil {
+		isNonStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NonStrikerID)
 
-	if err != nil {
-		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
-		return
-	}
+		if err != nil {
+			utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+			return
+		}
 
-	if isNonStrikerOut {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("non striker is already out"), "non striker is already out")
-		return
+		if isNonStrikerOut {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("non striker is already out"), "non striker is already out")
+			return
+		}
 	}
 
 	matchEnded := false
