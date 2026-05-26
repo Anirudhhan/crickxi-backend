@@ -245,10 +245,51 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 }
 
 func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails, err error) {
-	query := `SELECT lm.current_inning_id, lm.striker_id, lm.non_striker_id, lm.current_bowler_id, 
-       		  lm.legal_balls, lm.current_ball_sequence, lm.current_score, lm.wickets, lm.is_free_hit
-				FROM live_match lm
-				WHERE lm.match_id = $1`
+	query := `SELECT
+				lm.current_inning_id,
+				lm.striker_id,
+				lm.non_striker_id,
+				lm.current_bowler_id,
+				lm.legal_balls,
+				lm.current_ball_sequence,
+				lm.current_score,
+				lm.wickets,
+				lm.is_free_hit,
+				m.overs_per_side,
+				m.current_inning_no,
+				m.end_time,
+				i.batting_team_id,
+				i.bowling_team_id,
+				i.is_completed,
+				COUNT(bsc.player_id) AS batting_player_count,
+				pi.total_runs AS previous_innings_score
+			FROM live_match lm
+					 LEFT JOIN matches m
+							   ON m.id = lm.match_id
+					 LEFT JOIN innings i
+							   ON i.id = lm.current_inning_id
+					 LEFT JOIN batting_scorecards bsc
+							   ON bsc.innings_id = i.id
+					 LEFT JOIN innings pi
+							   ON pi.match_id = m.id AND pi.innings_order = m.current_inning_no - 1
+			WHERE lm.match_id = $1
+			GROUP BY
+				lm.current_inning_id,
+				lm.striker_id,
+				lm.non_striker_id,
+				lm.current_bowler_id,
+				lm.legal_balls,
+				lm.current_ball_sequence,
+				lm.current_score,
+				lm.wickets,
+				lm.is_free_hit,
+				m.overs_per_side,
+				m.current_inning_no,
+				m.end_time,
+				i.batting_team_id,
+				i.bowling_team_id,
+				i.is_completed,
+				pi.total_runs`
 
 	err = database.DB.Get(&liveMatchData, query, matchID)
 	return liveMatchData, err

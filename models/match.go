@@ -104,4 +104,14 @@ type LiveMatchDetails struct {
 	CurrentScore        int    `db:"current_score"`
 	Wickets             int    `db:"wickets"`
 	IsFreeHit           bool   `db:"is_free_hit"`
+
+	OversPerSide         int    `db:"overs_per_side"`
+	CurrentInningNo      int    `db:"current_inning_no"`
+	BattingTeamID        string `db:"batting_team_id"`
+	BowlingTeamID        string `db:"bowling_team_id"`
+	BattingPlayerCount   int    `db:"batting_player_count"`
+	PreviousInningsScore *int   `db:"previous_innings_score"`
+
+	IsCompleted bool    `db:"is_completed"`
+	EndTime     *string `db:"end_time"`
 }
