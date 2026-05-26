@@ -88,7 +88,7 @@ func BallEvent(ctx *gin.Context) {
 
 	if delivery.IsWicket {
 
-		if delivery.NextBatterID == nil || delivery.WicketPlayerID == nil || delivery.WicketType == nil {
+		if delivery.WicketPlayerID == nil || delivery.WicketType == nil {
 			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("invalid wicket data"), "invalid wicket data")
 			return
 		}
