@@ -95,15 +95,15 @@ type MatchCard struct {
 }
 
 type LiveMatchDetails struct {
-	CurrentInningID     string `db:"current_inning_id"`
-	StrikerID           string `db:"striker_id"`
-	NonStrikerID        string `db:"non_striker_id"`
-	CurrentBowlerID     string `db:"current_bowler_id"`
-	LegalBalls          int    `db:"legal_balls"`
-	CurrentBallSequence int    `db:"current_ball_sequence"`
-	CurrentScore        int    `db:"current_score"`
-	Wickets             int    `db:"wickets"`
-	IsFreeHit           bool   `db:"is_free_hit"`
+	CurrentInningID     string  `db:"current_inning_id"`
+	StrikerID           string  `db:"striker_id"`
+	NonStrikerID        *string `db:"non_striker_id"`
+	CurrentBowlerID     string  `db:"current_bowler_id"`
+	LegalBalls          int     `db:"legal_balls"`
+	CurrentBallSequence int     `db:"current_ball_sequence"`
+	CurrentScore        int     `db:"current_score"`
+	Wickets             int     `db:"wickets"`
+	IsFreeHit           bool    `db:"is_free_hit"`
 
 	OversPerSide         int    `db:"overs_per_side"`
 	CurrentInningNo      int    `db:"current_inning_no"`

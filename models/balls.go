@@ -20,7 +20,7 @@ type Delivery struct {
 	IsLegalDelivery bool    `db:"is_legal_delivery"`
 	LegalBalls      int     `db:"legal_balls"`
 	StrikerID       string  `db:"striker_id"`
-	NonStrikerID    string  `db:"non_striker_id"`
+	NonStrikerID    *string `db:"non_striker_id"`
 	BowlerID        string  `db:"bowler_id"`
 	RunsBatter      int     `db:"runs_batter"`
 	RunsExtra       int     `db:"runs_extra"`

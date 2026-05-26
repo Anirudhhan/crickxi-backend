@@ -216,26 +216,46 @@ func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string) erro
 	nonStrikerID := delivery.NonStrikerID
 
 	// strike rotation
-	if delivery.RunsBatter%2 == 1 {
-		strikerID, nonStrikerID = nonStrikerID, strikerID
+	if nonStrikerID != nil {
+		totalMovementRuns := delivery.RunsBatter + delivery.RunsExtra
+		if totalMovementRuns%2 == 1 {
+			temp := strikerID
+			strikerID = *nonStrikerID
+			nonStrikerID = &temp
+		}
 	}
 
-	// new batter assign
-	if delivery.IsWicket && delivery.NextBatterID != nil &&
-		delivery.WicketPlayerID != nil {
+	// wicket handling
+	if delivery.IsWicket && delivery.WicketPlayerID != nil {
+		// striker out
 		if *delivery.WicketPlayerID == strikerID {
-			strikerID = *delivery.NextBatterID
+			if delivery.NextBatterID != nil {
+				strikerID = *delivery.NextBatterID
+			} else if nonStrikerID != nil {
+				// last batter standing
+				strikerID = *nonStrikerID
+				nonStrikerID = nil
+			}
 		}
 
-		if *delivery.WicketPlayerID == nonStrikerID {
-			nonStrikerID = *delivery.NextBatterID
+		// non striker out
+		if nonStrikerID != nil && *delivery.WicketPlayerID == *nonStrikerID {
+			if delivery.NextBatterID != nil {
+				nonStrikerID = delivery.NextBatterID
+			} else {
+				nonStrikerID = nil
+			}
 		}
 	}
 
 	// over completed
 	newLegalBalls := delivery.LegalBalls + legalBalls
 	if legalBalls == 1 && newLegalBalls%6 == 0 {
-		strikerID, nonStrikerID = nonStrikerID, strikerID
+		if nonStrikerID != nil {
+			temp := strikerID
+			strikerID = *nonStrikerID
+			nonStrikerID = &temp
+		}
 	}
 
 	_, err := tx.Exec(query, totalRuns, wickets, legalBalls, strikerID, nonStrikerID, delivery.BowlerID, nextFreeHit, matchID)

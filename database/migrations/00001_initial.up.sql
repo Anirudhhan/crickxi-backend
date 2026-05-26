@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS balls (
     is_free_hit BOOLEAN DEFAULT FALSE,
     is_legal_delivery BOOLEAN DEFAULT TRUE,
     striker_id UUID REFERENCES player_stats(id) NOT NULL,
-    non_striker_id UUID REFERENCES player_stats(id) NOT NULL,
+    non_striker_id UUID REFERENCES player_stats(id),
     bowler_id UUID REFERENCES player_stats(id) NOT NULL,
     runs_batter INT DEFAULT 0,
     runs_extra INT DEFAULT 0,
