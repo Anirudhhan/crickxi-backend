@@ -22,6 +22,23 @@ func CreateMatch(ctx *gin.Context) {
 		return
 	}
 
+	{
+		if createMatchReq.StrikerID == createMatchReq.NonStrikerID {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker and non striker cannot be same"), "striker and non striker cannot be same")
+			return
+		}
+
+		if createMatchReq.StrikerID == createMatchReq.CurrentBowlerID {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be striker"), "bowler cannot be striker")
+			return
+		}
+
+		if createMatchReq.NonStrikerID == createMatchReq.CurrentBowlerID {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be non striker"), "bowler cannot be non striker")
+			return
+		}
+	}
+
 	if err := ctx.ShouldBindJSON(&createMatchReq); err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
@@ -167,4 +184,122 @@ func GetMatchByID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, matchCard)
+}
+
+func StartNextInnings(ctx *gin.Context) {
+	var nextInningReq models.StartNextInningsReq
+	matchID := ctx.Param("matchID")
+
+	if err := ctx.ShouldBindJSON(&nextInningReq); err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
+		return
+	}
+	//TODO: take out later
+	{
+		if nextInningReq.StrikerID == nextInningReq.NonStrikerID {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker and non striker cannot be same"), "striker and non striker cannot be same")
+			return
+		}
+
+		if nextInningReq.StrikerID == nextInningReq.BowlerID {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be striker"), "bowler cannot be striker")
+			return
+		}
+
+		if nextInningReq.NonStrikerID == nextInningReq.BowlerID {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("bowler cannot be non striker"), "bowler cannot be non striker")
+			return
+		}
+	}
+
+	matchData, err := dbHelper.GetLiveMatchDetails(matchID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.ErrorResponse(ctx, http.StatusNotFound, err, "invalid match id")
+			return
+		}
+
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
+
+	if matchData.CurrentInningNo != 1 {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("second innings already started"), "second innings already started")
+		return
+	}
+
+	if matchData.EndTime != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("match already completed"), "match already completed")
+		return
+	}
+
+	if !matchData.IsCompleted {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("first innings not completed"), "first innings not completed")
+		return
+	}
+	//Transactions
+	{
+		txErr := database.Tx(func(tx *sqlx.Tx) error {
+
+			// swap teams
+			battingTeamID := matchData.BowlingTeamID
+
+			bowlingTeamID := matchData.BattingTeamID
+
+			inningID, err := dbHelper.StartInning(tx, matchID, battingTeamID, bowlingTeamID, 2, "normal")
+
+			if err != nil {
+				return err
+			}
+
+			battingPlayers, err := dbHelper.GetPlayersByTeamID(battingTeamID)
+
+			if err != nil {
+				return err
+			}
+
+			bowlingPlayers, err := dbHelper.GetPlayersByTeamID(bowlingTeamID)
+
+			if err != nil {
+				return err
+			}
+
+			err = dbHelper.CreateBattingScorecards(tx, inningID, battingPlayers)
+
+			if err != nil {
+				return err
+			}
+
+			err = dbHelper.CreateBowlingScorecards(tx, inningID, bowlingPlayers)
+
+			if err != nil {
+				return err
+			}
+
+			err = dbHelper.ResetLiveMatchForNextInnings(tx, matchID, inningID, nextInningReq)
+
+			if err != nil {
+				return err
+			}
+
+			err = dbHelper.UpdateMatchInningNo(tx, matchID, 2)
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		if txErr != nil {
+
+			utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to start second innings")
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "second innings started",
+	})
+
 }

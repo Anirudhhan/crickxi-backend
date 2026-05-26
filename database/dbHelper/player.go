@@ -98,3 +98,11 @@ func SearchPlayers(search string) (players []models.SearchPlayer, err error) {
 	err = database.DB.Select(&players, query, search, search)
 	return players, err
 }
+
+func GetPlayersByTeamID(teamID string) (players []models.Player, err error) {
+
+	query := `SELECT player_id FROM team_players WHERE team_id = $1`
+
+	err = database.DB.Select(&players, query, teamID)
+	return players, err
+}

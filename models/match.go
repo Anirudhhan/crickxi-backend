@@ -3,8 +3,8 @@ package models
 import "time"
 
 type Player struct {
-	PlayerID  string `json:"playerID"`
-	IsCaptain bool   `json:"isCaptain"`
+	PlayerID  string `json:"playerID" db:"player_id"`
+	IsCaptain bool   `json:"isCaptain" db:"is_captain"`
 	Phone     string `json:"phone"`
 	Name      string `json:"name"`
 }
@@ -114,4 +114,10 @@ type LiveMatchDetails struct {
 
 	IsCompleted bool    `db:"is_completed"`
 	EndTime     *string `db:"end_time"`
+}
+
+type StartNextInningsReq struct {
+	StrikerID    string `json:"strikerID"`
+	NonStrikerID string `json:"nonStrikerID"`
+	BowlerID     string `json:"bowlerID"`
 }
