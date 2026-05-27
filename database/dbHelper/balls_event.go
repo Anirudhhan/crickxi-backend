@@ -44,15 +44,8 @@ func UpdateInnings(tx *sqlx.Tx, delivery models.Delivery) error {
 	wicket := 0
 	if delivery.IsWicket &&
 		delivery.WicketType != nil {
-
 		switch *delivery.WicketType {
-
-		case "bowled",
-			"caught",
-			"lbw",
-			"stumped",
-			"hit_wicket",
-			"run_out":
+		case "bowled", "caught", "lbw", "stumped", "hit_wicket", "run_out":
 
 			wicket = 1
 		}
@@ -85,51 +78,69 @@ func UpdateInnings(tx *sqlx.Tx, delivery models.Delivery) error {
 }
 
 func UpdateBattingScoreCard(tx *sqlx.Tx, delivery models.Delivery) error {
-	query := `UPDATE batting_scorecards
-				SET runs = runs + $1,
-					balls = balls + $2,
-					fours = fours + $3,
-					sixes = sixes + $4,
-					dismissal_type = $5,
-					dismissal_by = $6,
-					is_out = $7,
-					updated_at = NOW()
-				WHERE innings_id = $8 AND player_id = $9`
+	// striker batting stats update
+	battingQuery := `UPDATE batting_scorecards
+					SET
+						runs = runs + $1,
+						balls = balls + $2,
+						fours = fours + $3,
+						sixes = sixes + $4,
+						updated_at = NOW()
+					WHERE innings_id = $5
+					AND player_id = $6`
 
 	balls := 0
 	if delivery.IsLegalDelivery {
-		balls += 1
+		balls = 1
 	}
 
 	fours := 0
 	if delivery.RunsBatter == 4 {
-		fours += 1
+		fours = 1
 	}
 
 	sixes := 0
 	if delivery.RunsBatter == 6 {
-		sixes += 1
+		sixes = 1
 	}
 
-	var dismissalBy any
+	_, err := tx.Exec(battingQuery, delivery.RunsBatter, balls, fours, sixes, delivery.InningsID, delivery.StrikerID)
 
-	if delivery.WicketType != nil {
-		switch *delivery.WicketType {
-		case "bowled", "caught", "lbw", "stumped", "hit_wicket":
-			dismissalBy = delivery.BowlerID
+	if err != nil {
+		return err
+	}
 
-		default:
-			dismissalBy = nil
+	// dismissal update
+	if delivery.IsWicket && delivery.WicketPlayerID != nil {
+		dismissalQuery := `UPDATE batting_scorecards
+							SET
+								dismissal_type = $1,
+								dismissal_by = $2,
+								is_out = true,
+								updated_at = NOW()
+							WHERE innings_id = $3
+							AND player_id = $4`
+
+		var dismissalBy any
+		if delivery.WicketType != nil {
+			switch *delivery.WicketType {
+			case "bowled", "caught", "lbw", "stumped", "hit_wicket":
+				dismissalBy = delivery.BowlerID
+			case "run_out":
+				dismissalBy = delivery.FielderID
+			default:
+
+				dismissalBy = nil
+			}
+		}
+
+		_, err = tx.Exec(dismissalQuery, delivery.WicketType, dismissalBy, delivery.InningsID, *delivery.WicketPlayerID)
+
+		if err != nil {
+			return err
 		}
 	}
-
-	dismissedPlayerID := delivery.StrikerID
-	if delivery.WicketPlayerID != nil {
-		dismissedPlayerID = *delivery.WicketPlayerID
-	}
-
-	_, err := tx.Exec(query, delivery.RunsBatter, balls, fours, sixes, delivery.WicketType, dismissalBy, delivery.IsWicket, delivery.InningsID, dismissedPlayerID)
-	return err
+	return nil
 }
 
 func UpdateBowlingScoreCard(tx *sqlx.Tx, delivery models.Delivery) error {
@@ -192,8 +203,7 @@ func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string) erro
 	totalRuns := delivery.RunsBatter + delivery.RunsExtra
 
 	wickets := 0
-	if delivery.IsWicket &&
-		delivery.WicketType != nil {
+	if delivery.IsWicket && delivery.WicketType != nil {
 		switch *delivery.WicketType {
 		case "bowled", "caught", "lbw", "stumped", "hit_wicket", "run_out":
 			wickets = 1
@@ -212,6 +222,11 @@ func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string) erro
 		}
 	}
 
+	// original positions before ball
+	originalStrikerID := delivery.StrikerID
+	originalNonStrikerID := delivery.NonStrikerID
+
+	// current positions after ball movement
 	strikerID := delivery.StrikerID
 	nonStrikerID := delivery.NonStrikerID
 
@@ -227,23 +242,29 @@ func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string) erro
 
 	// wicket handling
 	if delivery.IsWicket && delivery.WicketPlayerID != nil {
-		// striker out
-		if *delivery.WicketPlayerID == strikerID {
+		// original striker out
+		if *delivery.WicketPlayerID == originalStrikerID {
 			if delivery.NextBatterID != nil {
-				strikerID = *delivery.NextBatterID
-			} else if nonStrikerID != nil {
-				// last batter standing
-				strikerID = *nonStrikerID
-				nonStrikerID = nil
+				// if strike rotated,
+				// new batter becomes non striker
+				if strikerID != originalStrikerID {
+					nonStrikerID = delivery.NextBatterID
+				} else {
+					strikerID = *delivery.NextBatterID
+				}
 			}
 		}
 
-		// non striker out
-		if nonStrikerID != nil && *delivery.WicketPlayerID == *nonStrikerID {
+		// original non striker out
+		if originalNonStrikerID != nil && *delivery.WicketPlayerID == *originalNonStrikerID {
 			if delivery.NextBatterID != nil {
-				nonStrikerID = delivery.NextBatterID
-			} else {
-				nonStrikerID = nil
+				// if strike rotated,
+				// new batter becomes striker
+				if strikerID == *originalNonStrikerID {
+					strikerID = *delivery.NextBatterID
+				} else {
+					nonStrikerID = delivery.NextBatterID
+				}
 			}
 		}
 	}
@@ -257,7 +278,6 @@ func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string) erro
 			nonStrikerID = &temp
 		}
 	}
-
 	_, err := tx.Exec(query, totalRuns, wickets, legalBalls, strikerID, nonStrikerID, delivery.BowlerID, nextFreeHit, matchID)
 	return err
 }
