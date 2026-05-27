@@ -50,6 +50,89 @@ func BallEvent(ctx *gin.Context) {
 
 	var delivery models.Delivery
 
+	PrepareDeliveryHelper(&delivery, liveMatchData, req)
+	if delivery.IsWicket {
+		if delivery.WicketPlayerID == nil || delivery.WicketType == nil {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("invalid wicket data"), "invalid wicket data")
+			return
+		}
+	}
+
+	// striker, non-striker and next batter not out validation
+	isOut, err := ValidateBattersHelper(delivery)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
+	if isOut {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("batter is already out"), "batter is already out")
+		return
+	}
+
+	matchEnded := false
+	inningEnded := false
+	txErr := ProcessBallEventHelper(delivery, liveMatchData, matchID, &inningEnded, &matchEnded)
+
+	if txErr != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to add ball")
+		return
+	}
+
+	if inningEnded {
+		ctx.JSON(http.StatusOK, gin.H{"message": "inning ended start new inning"})
+		return
+	}
+	if matchEnded {
+		ctx.JSON(http.StatusOK, gin.H{"message": "match ended"})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{
+		"message": "ball added successfully",
+	})
+}
+
+func ValidateBattersHelper(delivery models.Delivery) (bool, error) {
+	if delivery.NextBatterID != nil {
+		isNextBatterOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NextBatterID)
+
+		if err != nil {
+			return false, err
+		}
+
+		if isNextBatterOut {
+			return true, nil
+		}
+	}
+
+	isStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, delivery.StrikerID)
+
+	if err != nil {
+		return false, err
+
+	}
+
+	if isStrikerOut {
+		return true, nil
+
+	}
+
+	if delivery.NonStrikerID != nil {
+		isNonStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NonStrikerID)
+
+		if err != nil {
+			return false, err
+
+		}
+
+		if isNonStrikerOut {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func PrepareDeliveryHelper(delivery *models.Delivery, liveMatchData models.LiveMatchDetails, req models.BallEventReq) {
 	delivery.InningsID = liveMatchData.CurrentInningID
 	delivery.StrikerID = liveMatchData.StrikerID
 	delivery.NonStrikerID = liveMatchData.NonStrikerID
@@ -86,60 +169,10 @@ func BallEvent(ctx *gin.Context) {
 		delivery.NextBatterID = req.NextBatterID
 	}
 
-	if delivery.IsWicket {
+}
 
-		if delivery.WicketPlayerID == nil || delivery.WicketType == nil {
-			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("invalid wicket data"), "invalid wicket data")
-			return
-		}
-	}
-
-	// striker, non-striker and next batter not out validation
-	{
-		if delivery.NextBatterID != nil {
-			isNextBatterOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NextBatterID)
-
-			if err != nil {
-				utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
-				return
-			}
-
-			if isNextBatterOut {
-				utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("next batter is already out"), "next batter is already out")
-				return
-			}
-		}
-
-		isStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, delivery.StrikerID)
-
-		if err != nil {
-			utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
-			return
-		}
-
-		if isStrikerOut {
-			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("striker is already out"), "striker is already out")
-			return
-		}
-
-		if delivery.NonStrikerID != nil {
-			isNonStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NonStrikerID)
-
-			if err != nil {
-				utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
-				return
-			}
-
-			if isNonStrikerOut {
-				utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("non striker is already out"), "non striker is already out")
-				return
-			}
-		}
-	}
-
-	matchEnded := false
-	inningEnded := false
-	txErr := database.Tx(func(tx *sqlx.Tx) error {
+func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+	err := database.Tx(func(tx *sqlx.Tx) error {
 
 		err := dbHelper.CreateBallEvent(tx, delivery)
 		if err != nil {
@@ -179,9 +212,9 @@ func BallEvent(ctx *gin.Context) {
 					}
 
 					if liveMatchData.CurrentInningNo == 1 {
-						inningEnded = true
+						*inningEnded = true
 					} else {
-						matchEnded = true
+						*matchEnded = true
 					}
 
 					return nil
@@ -198,9 +231,9 @@ func BallEvent(ctx *gin.Context) {
 					}
 
 					if liveMatchData.CurrentInningNo == 1 {
-						inningEnded = true
+						*inningEnded = true
 					} else {
-						matchEnded = true
+						*matchEnded = true
 					}
 
 					return nil
@@ -220,9 +253,9 @@ func BallEvent(ctx *gin.Context) {
 				}
 
 				if liveMatchData.CurrentInningNo == 1 {
-					inningEnded = true
+					*inningEnded = true
 				} else {
-					matchEnded = true
+					*matchEnded = true
 				}
 				return nil
 			}
@@ -230,22 +263,8 @@ func BallEvent(ctx *gin.Context) {
 
 		return nil
 	})
-
-	if txErr != nil {
-		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to add ball")
-		return
+	if err != nil {
+		return err
 	}
-
-	if inningEnded {
-		ctx.JSON(http.StatusOK, gin.H{"message": "inning ended start new inning"})
-		return
-	}
-	if matchEnded {
-		ctx.JSON(http.StatusOK, gin.H{"message": "match ended"})
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, gin.H{
-		"message": "ball added successfully",
-	})
+	return nil
 }
