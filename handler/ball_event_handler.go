@@ -7,7 +7,6 @@ import (
 	"crickxi-backend/utils"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -329,15 +328,9 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 				liveMatchData.CurrentScore += delivery.RunsExtra + delivery.RunsBatter
 				target := *liveMatchData.PreviousInningsScore
 				if liveMatchData.CurrentScore > target {
-					err = dbHelper.HandleInningsOrMatchCompletion(tx, liveMatchData, matchID)
+					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 					if err != nil {
 						return err
-					}
-
-					if liveMatchData.CurrentInningNo == 1 {
-						*inningEnded = true
-					} else {
-						*matchEnded = true
 					}
 
 					return nil
@@ -345,18 +338,11 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			}
 			if delivery.IsWicket {
 				//handle wicket ended
-				// TODO: Later handle hurt out
 				currentWickets := liveMatchData.Wickets + 1
 				if currentWickets >= liveMatchData.BattingPlayerCount {
-					err = dbHelper.HandleInningsOrMatchCompletion(tx, liveMatchData, matchID)
+					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 					if err != nil {
 						return err
-					}
-
-					if liveMatchData.CurrentInningNo == 1 {
-						*inningEnded = true
-					} else {
-						*matchEnded = true
 					}
 
 					return nil
@@ -368,18 +354,12 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			if delivery.IsLegalDelivery {
 				currentLegalBalls++
 			}
-			fmt.Println("current legal", currentLegalBalls, "----- overperside", liveMatchData.OversPerSide*6)
 			if currentLegalBalls >= liveMatchData.OversPerSide*6 {
-				err = dbHelper.HandleInningsOrMatchCompletion(tx, liveMatchData, matchID)
+				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 				if err != nil {
 					return err
 				}
 
-				if liveMatchData.CurrentInningNo == 1 {
-					*inningEnded = true
-				} else {
-					*matchEnded = true
-				}
 				return nil
 			}
 		}
@@ -389,5 +369,39 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func HandleInningsOrMatchCompletion(tx *sqlx.Tx, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+
+	err := dbHelper.CompleteInnings(tx, liveMatchData.CurrentInningID)
+	if err != nil {
+		return err
+	}
+
+	// second innings, match completed
+	if liveMatchData.CurrentInningNo == 2 {
+		var winnerTeamID *string
+		if liveMatchData.PreviousInningsScore != nil {
+			if liveMatchData.CurrentScore > *liveMatchData.PreviousInningsScore {
+				winnerTeamID = &liveMatchData.BattingTeamID
+
+			} else if liveMatchData.CurrentScore < *liveMatchData.PreviousInningsScore {
+				winnerTeamID = &liveMatchData.BowlingTeamID
+			}
+		}
+
+		err = dbHelper.CompleteMatch(tx, matchID, winnerTeamID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if liveMatchData.CurrentInningNo == 1 {
+		*inningEnded = true
+	} else {
+		*matchEnded = true
+	}
+
 	return nil
 }
