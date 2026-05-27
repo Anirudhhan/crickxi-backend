@@ -179,9 +179,9 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			return err
 		}
 
-		balls := 0
+		legalBall := 0
 		if delivery.IsLegalDelivery {
-			balls = 1
+			legalBall = 1
 		}
 
 		fours := 0
@@ -194,127 +194,72 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			sixes = 1
 		}
 
-		err = dbHelper.UpdateBatterStats(tx, delivery, balls, fours, sixes)
+		totalRuns := delivery.RunsBatter + delivery.RunsExtra
+		wides := 0
+		noBall := 0
+		extraWide := 0
+		extraNoBall := 0
+		nextFreeHit := false
+
+		if !delivery.IsLegalDelivery {
+			if delivery.ExtraType != nil {
+				if *delivery.ExtraType == "wide" {
+					extraWide = delivery.RunsExtra
+					wides += 1
+				}
+				if *delivery.ExtraType == "no_ball" {
+					extraNoBall = delivery.RunsExtra
+					noBall += 1
+					nextFreeHit = true
+				}
+			}
+		}
+
+		//update batting scoreCard
+		err = dbHelper.UpdateBatterStats(tx, delivery, legalBall, fours, sixes)
 		if err != nil {
 			return err
 		}
 
-		//Update out player
+		//Update dismissed player
+		wicket := 0
+		inningsWicket := 0
 		if delivery.IsWicket && delivery.WicketPlayerID != nil {
-			var dismissalBy string
+			var dismissalBy *string
 			if delivery.WicketType != nil {
 				switch *delivery.WicketType {
 				case "bowled", "caught", "lbw", "stumped", "hit_wicket":
-					dismissalBy = delivery.BowlerID
+					wicket = 1
+					inningsWicket = 1
+					dismissalBy = &delivery.BowlerID
 				case "run_out":
+					inningsWicket = 1
 					if delivery.FielderID != nil {
-						dismissalBy = *delivery.FielderID
+						dismissalBy = delivery.FielderID
 					}
 				}
 			}
 
-			err = dbHelper.UpdateDismissedBatter(tx, delivery, &dismissalBy)
+			err = dbHelper.UpdateDismissedBatter(tx, delivery, dismissalBy)
 			if err != nil {
 				return err
 			}
 		}
 
 		//update bowling scorecard
-		{
-			runs := delivery.RunsBatter + delivery.RunsExtra
-			legalBall := 0
-			if delivery.IsLegalDelivery {
-				legalBall += 1
-			}
-
-			wides := 0
-			noBall := 0
-			if !delivery.IsLegalDelivery {
-				if delivery.ExtraType != nil {
-					switch *delivery.ExtraType {
-					case "no_ball":
-						noBall += 1
-					default:
-						wides += 1
-					}
-				}
-			}
-
-			wicket := 0
-			if delivery.IsWicket && delivery.WicketType != nil {
-				switch *delivery.WicketType {
-				case "bowled", "caught", "lbw", "stumped", "hit_wicket":
-					wicket = 1
-				}
-			}
-
-			err = dbHelper.UpdateBowlingScoreCard(tx, delivery, legalBall, runs, wides, noBall, wicket)
-			if err != nil {
-				return err
-			}
+		err = dbHelper.UpdateBowlingScoreCard(tx, delivery, legalBall, totalRuns, wides, noBall, wicket)
+		if err != nil {
+			return err
 		}
 
 		//Update innings
-		{
-			wicket := 0
-			if delivery.IsWicket && delivery.WicketType != nil {
-				switch *delivery.WicketType {
-				case "bowled", "caught", "lbw", "stumped", "hit_wicket", "run_out":
-
-					wicket = 1
-				}
-			}
-
-			legalBall := 0
-			if delivery.IsLegalDelivery {
-				legalBall = 1
-			}
-
-			extraWide := 0
-			extraNoBall := 0
-
-			if delivery.ExtraType != nil {
-
-				if *delivery.ExtraType == "wide" {
-					extraWide = delivery.RunsExtra
-				}
-
-				if *delivery.ExtraType == "no_ball" {
-					extraNoBall = delivery.RunsExtra
-				}
-			}
-
-			totalRuns := delivery.RunsBatter + delivery.RunsExtra
-			err = dbHelper.UpdateInnings(tx, delivery, totalRuns, wicket, legalBall, extraWide, extraNoBall)
-			if err != nil {
-				return err
-			}
+		err = dbHelper.UpdateInnings(tx, delivery, totalRuns, inningsWicket, legalBall, extraWide, extraNoBall)
+		if err != nil {
+			return err
 		}
 
 		//update live match
 		{
-			totalRuns := delivery.RunsBatter + delivery.RunsExtra
-
-			wickets := 0
-			if delivery.IsWicket && delivery.WicketType != nil {
-				switch *delivery.WicketType {
-				case "bowled", "caught", "lbw", "stumped", "hit_wicket", "run_out":
-					wickets = 1
-				}
-			}
-
-			legalBalls := 0
-			if delivery.IsLegalDelivery {
-				legalBalls = 1
-			}
-
-			nextFreeHit := false
-			if delivery.ExtraType != nil {
-				if *delivery.ExtraType == "no_ball" {
-					nextFreeHit = true
-				}
-			}
-
 			// original positions before ball
 			originalStrikerID := delivery.StrikerID
 			originalNonStrikerID := delivery.NonStrikerID
@@ -363,15 +308,15 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			}
 
 			// over completed
-			newLegalBalls := delivery.LegalBalls + legalBalls
-			if legalBalls == 1 && newLegalBalls%6 == 0 {
+			newLegalBalls := delivery.LegalBalls + legalBall
+			if legalBall == 1 && newLegalBalls%6 == 0 {
 				if nonStrikerID != nil {
 					temp := strikerID
 					strikerID = *nonStrikerID
 					nonStrikerID = &temp
 				}
 			}
-			err = dbHelper.UpdateLiveMatch(tx, delivery, matchID, totalRuns, wickets, legalBalls, strikerID, *nonStrikerID, nextFreeHit)
+			err = dbHelper.UpdateLiveMatch(tx, delivery, matchID, totalRuns, inningsWicket, legalBall, strikerID, nonStrikerID, nextFreeHit)
 			if err != nil {
 				return err
 			}
