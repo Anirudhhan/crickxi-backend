@@ -7,29 +7,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func CreateTeam(tx *sqlx.Tx, name string, createdBy string) (teamID string, err error) {
-
-	query := `INSERT INTO teams(name,created_by)
-				VALUES($1, $2) RETURNING id`
-
-	err = tx.Get(&teamID, query, name, createdBy)
-	return teamID, err
-}
-
-func AddPlayersToTeam(tx *sqlx.Tx, teamID string, players []models.Player) error {
-
-	query := `INSERT INTO team_players( team_id, player_id,	is_captain)
-			VALUES($1, $2, $3)`
-
-	for _, player := range players {
-		_, err := tx.Exec(query, teamID, player.PlayerID, player.IsCaptain)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string, tossWinnerTeamID string, teamAID string, teamBID string) (matchID string, err error) {
 
 	query := `
@@ -43,43 +20,6 @@ func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string, toss
 		hostID, req.ScorerID1, req.ScorerID2, req.Overs)
 
 	return matchID, err
-}
-
-func StartInning(tx *sqlx.Tx, matchID string, battingTeamID string, bowlingTeamID string, inningsOrder int, inningsType string) (InningID string, err error) {
-	query := `INSERT INTO innings(match_id, batting_team_id, bowling_team_id, innings_order, innings_type) 
-				VALUES ($1, $2, $3, $4, $5) RETURNING id`
-
-	err = tx.Get(&InningID, query, matchID, battingTeamID, bowlingTeamID, inningsOrder, inningsType)
-	return InningID, err
-}
-
-func CreateBattingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {
-
-	query := `INSERT INTO batting_scorecards(innings_id,player_id)
-				VALUES($1, $2)`
-
-	for _, player := range players {
-		_, err := tx.Exec(query, inningID, player.PlayerID)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func CreateBowlingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {
-
-	query := `INSERT INTO bowling_scorecards(innings_id,player_id)
-				VALUES($1, $2)`
-
-	for _, player := range players {
-		_, err := tx.Exec(query, inningID, player.PlayerID)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func StartLiveMatch(tx *sqlx.Tx, matchID string, inningID string, req models.CreateMatchRequest) (err error) {
@@ -322,5 +262,18 @@ func UpdateMatchInningNo(tx *sqlx.Tx, matchID string, inningNo int) error {
 				WHERE id = $2`
 
 	_, err := tx.Exec(query, inningNo, matchID)
+	return err
+}
+
+func CompleteMatch(tx *sqlx.Tx, matchID string, winnerTeamID *string) error {
+	query := `UPDATE matches
+				SET
+					match_status = 'completed',
+					winner_team_id = $1,
+					end_time = NOW(),
+					updated_at = NOW()
+				WHERE id = $2`
+
+	_, err := tx.Exec(query, winnerTeamID, matchID)
 	return err
 }
