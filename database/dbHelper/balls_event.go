@@ -37,11 +37,10 @@ func UpdateInnings(tx *sqlx.Tx, delivery models.Delivery, totalRuns int, wicket 
 				extras = extras + $4,
 				extras_wides = extras_wides + $5,
 				extras_no_balls = extras_no_balls + $6,
-				is_completed = COALESCE($7, is_completed),
 				updated_at = NOW()
-			WHERE id = $8`
+			WHERE id = $7`
 
-	_, err := tx.Exec(query, totalRuns, wicket, legalBall, delivery.RunsExtra, extraWide, extraNoBall, false, delivery.InningsID)
+	_, err := tx.Exec(query, totalRuns, wicket, legalBall, delivery.RunsExtra, extraWide, extraNoBall, delivery.InningsID)
 
 	return err
 }
@@ -89,7 +88,7 @@ func UpdateBowlingScoreCard(tx *sqlx.Tx, delivery models.Delivery, legalBall int
 }
 
 func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string, totalRuns int, wickets int, legalBalls int,
-	strikerID string, nonStrikerID string, nextFreeHit bool) error {
+	strikerID string, nonStrikerID *string, nextFreeHit bool) error {
 
 	query := `UPDATE live_match
 				SET
