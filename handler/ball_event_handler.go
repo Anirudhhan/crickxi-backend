@@ -135,11 +135,7 @@ func PrepareDeliveryHelper(delivery *models.Delivery, liveMatchData models.LiveM
 	delivery.InningsID = liveMatchData.CurrentInningID
 	delivery.StrikerID = liveMatchData.StrikerID
 	delivery.NonStrikerID = liveMatchData.NonStrikerID
-	if req.NextBowlerID != nil {
-		delivery.BowlerID = *req.NextBowlerID
-	} else {
-		delivery.BowlerID = liveMatchData.CurrentBowlerID
-	}
+	delivery.BowlerID = liveMatchData.CurrentBowlerID
 	delivery.LegalBalls = liveMatchData.LegalBalls
 
 	delivery.BallSequence = liveMatchData.CurrentBallSequence + 1
@@ -404,4 +400,35 @@ func HandleInningsOrMatchCompletion(tx *sqlx.Tx, liveMatchData models.LiveMatchD
 	}
 
 	return nil
+}
+
+func ChangeBowler(ctx *gin.Context) {
+	var req struct {
+		BowlerID string `json:"bowlerID"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
+		return
+	}
+
+	matchID := ctx.Param("matchID")
+	validBowler, err := dbHelper.ValidateBowlerID(matchID, req.BowlerID)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
+
+	if !validBowler {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("invalid bowler id"), "invalid bowler")
+		return
+	}
+
+	err = dbHelper.ChangeBowler(matchID, req.BowlerID)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "bowler changed successfully"})
 }

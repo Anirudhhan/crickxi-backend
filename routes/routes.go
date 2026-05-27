@@ -68,6 +68,8 @@ func SetUpRoutes() *gin.Engine {
 
 		auth.POST("/matches/:matchID/balls", handler.BallEvent)
 
+		auth.POST("/matches/:matchID/change-bowler", handler.ChangeBowler)
+
 		auth.POST("/matches/:matchID/start-next-innings", handler.StartNextInnings)
 	}
 

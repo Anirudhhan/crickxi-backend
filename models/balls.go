@@ -9,7 +9,6 @@ type BallEventReq struct {
 	WicketPlayerID *string `json:"wicketPlayerID"`
 	FielderID      *string `json:"fielderID"`
 	NextBatterID   *string `json:"nextBatterID"`
-	NextBowlerID   *string `json:"nextBowlerID"`
 }
 type Delivery struct {
 	InningsID       string  `db:"innings_id"`

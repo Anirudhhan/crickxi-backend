@@ -87,6 +87,32 @@ func UpdateBowlingScoreCard(tx *sqlx.Tx, delivery models.Delivery, legalBall int
 	return err
 }
 
+func ValidateBowlerID(matchID string, bowlerID string) (isValid bool, err error) {
+	query := `SELECT EXISTS (
+				SELECT 1
+				FROM live_match lm
+				INNER JOIN innings i
+					ON i.id = lm.current_inning_id
+				INNER JOIN team_players tp
+					ON tp.team_id = i.bowling_team_id
+				WHERE lm.match_id = $1
+				  AND tp.player_id = $2)`
+
+	err = database.DB.Get(&isValid, query, matchID, bowlerID)
+	return isValid, err
+}
+
+func ChangeBowler(matchID string, bowlerID string) error {
+	query := `UPDATE live_match
+				SET
+					current_bowler_id = $1,
+					updated_at = NOW()
+				WHERE match_id = $2`
+
+	_, err := database.DB.Exec(query, bowlerID, matchID)
+	return err
+}
+
 func UpdateLiveMatch(tx *sqlx.Tx, delivery models.Delivery, matchID string, totalRuns int, wickets int, legalBalls int,
 	strikerID string, nonStrikerID *string, nextFreeHit bool) error {
 
