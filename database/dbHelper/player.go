@@ -64,7 +64,7 @@ func GetPlayerProfileByID(playerStatsID string) (playerStats models.PlayerStats,
 	return playerStats, err
 }
 
-func UpdateUserProfile(tx *sqlx.Tx, userID string, name string, battingStyle string, bowlingStyle string) error {
+func UpdateUserProfile(tx *sqlx.Tx, userID string, name string, battingStyle *string, bowlingStyle *string) error {
 	userQuery := `UPDATE users
 				SET
 					name = $1, updated_at = NOW()

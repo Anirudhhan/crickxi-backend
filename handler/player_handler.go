@@ -98,10 +98,17 @@ func CreateGuestPlayer(ctx *gin.Context) {
 		return
 	}
 
+	formattedPhone, err := utils.ValidatePhoneNumber(req.Phone)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, "invalid phone number")
+		return
+	}
+	req.Phone = formattedPhone
+
 	var userID string
 	var playerID string
 
-	err := database.Tx(func(tx *sqlx.Tx) error {
+	err = database.Tx(func(tx *sqlx.Tx) error {
 		var txErr error
 
 		userID, txErr = dbHelper.RegisterUser(tx, req.Name, req.Phone, nil)

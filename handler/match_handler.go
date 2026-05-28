@@ -27,7 +27,7 @@ func CreateMatch(ctx *gin.Context) {
 		return
 	}
 
-	err := ValidateBatterHelper(createMatchReq.StrikerID, createMatchReq.NonStrikerID, createMatchReq.CurrentBowlerID)
+	err := ValidateBattersHelper(createMatchReq.StrikerID, createMatchReq.NonStrikerID, createMatchReq.CurrentBowlerID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
@@ -197,7 +197,7 @@ func StartNextInnings(ctx *gin.Context) {
 		return
 	}
 
-	err := ValidateBatterHelper(nextInningsReq.StrikerID, nextInningsReq.NonStrikerID, nextInningsReq.BowlerID)
+	err := ValidateBattersHelper(nextInningsReq.StrikerID, nextInningsReq.NonStrikerID, nextInningsReq.BowlerID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
@@ -295,7 +295,7 @@ func StartNextInnings(ctx *gin.Context) {
 
 }
 
-func ValidateBatterHelper(strikerID string, nonStrikerID *string, bowlerID string) error {
+func ValidateBattersHelper(strikerID string, nonStrikerID *string, bowlerID string) error {
 	if strikerID == "" {
 		return errors.New("striker is required")
 	}

@@ -282,7 +282,16 @@ func ValidateBowlerID(matchID string, bowlerID string) (isValid bool, err error)
 				INNER JOIN team_players tp
 					ON tp.team_id = i.bowling_team_id
 				WHERE lm.match_id = $1
-				  AND tp.player_id = $2)`
+				  AND tp.player_id = $2
+				  AND (
+					lm.striker_id IS NULL
+					OR lm.striker_id != $2
+				  )
+				  AND (
+					lm.non_striker_id IS NULL
+					OR lm.non_striker_id != $2
+				  )
+			)`
 
 	err = database.DB.Get(&isValid, query, matchID, bowlerID)
 	return isValid, err

@@ -26,6 +26,13 @@ func RegisterUser(ctx *gin.Context) {
 		return
 	}
 
+	formattedPhone, err := utils.ValidatePhoneNumber(registerUserReq.Phone)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, "invalid phone number")
+		return
+	}
+	registerUserReq.Phone = formattedPhone
+
 	hashedPassword, err := utils.HashPassword(registerUserReq.Password)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, err.Error())
@@ -76,23 +83,29 @@ func LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	userDetails, err := dbHelper.GetLoginDetailsByPhone(loginUserReq.Phone)
+	formattedPhone, err := utils.ValidatePhoneNumber(loginUserReq.Phone)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, err, "invalid phone number")
+		return
+	}
+
+	userDetails, err := dbHelper.GetLoginDetailsByPhone(formattedPhone)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			utils.ErrorResponse(ctx, http.StatusForbidden, err, "invalid credentials")
+			utils.ErrorResponse(ctx, http.StatusUnauthorized, err, "invalid credentials")
 			return
 		}
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, err.Error())
 		return
 	}
 	if userDetails.HashPassword == nil {
-		utils.ErrorResponse(ctx, http.StatusForbidden, errors.New("invalid credentials"), "invalid credentials")
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, errors.New("invalid credentials"), "invalid credentials")
 		return
 	}
 
 	//TODO: check unauthorized hoga ig
 	if err := utils.CheckPasswordHash(loginUserReq.Password, *userDetails.HashPassword); err != nil {
-		utils.ErrorResponse(ctx, http.StatusForbidden, err, "invalid credentials")
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, err, "invalid credentials")
 		return
 	}
 

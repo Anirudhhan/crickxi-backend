@@ -55,13 +55,8 @@ func BallEvent(ctx *gin.Context) {
 	}
 
 	// striker, non-striker and next batter not out validation
-	isOut, err := ValidateBattersHelper(delivery)
-	if err != nil {
-		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
-		return
-	}
-	if isOut {
-		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("batter is already out"), "batter is already out")
+	if err = ValidateBattersNotOutHelper(delivery); err != nil {
+		utils.ErrorResponse(ctx, http.StatusConflict, err, err.Error())
 		return
 	}
 
@@ -88,44 +83,40 @@ func BallEvent(ctx *gin.Context) {
 	})
 }
 
-func ValidateBattersHelper(delivery models.Delivery) (bool, error) {
+func ValidateBattersNotOutHelper(delivery models.Delivery) error {
 	if delivery.NextBatterID != nil {
-		isNextBatterOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NextBatterID)
-
-		if err != nil {
-			return false, err
+		if *delivery.NextBatterID == delivery.BowlerID {
+			return errors.New("next batter cannot be the current bowler")
 		}
 
+		isNextBatterOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NextBatterID)
+		if err != nil {
+			return err
+		}
 		if isNextBatterOut {
-			return true, nil
+			return errors.New("next batter is already out")
 		}
 	}
 
 	isStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, delivery.StrikerID)
-
 	if err != nil {
-		return false, err
-
+		return err
 	}
-
 	if isStrikerOut {
-		return true, nil
-
+		return errors.New("striker is already out")
 	}
 
 	if delivery.NonStrikerID != nil {
 		isNonStrikerOut, err := dbHelper.IsPlayerOut(delivery.InningsID, *delivery.NonStrikerID)
-
 		if err != nil {
-			return false, err
-
+			return err
 		}
-
 		if isNonStrikerOut {
-			return true, nil
+			return errors.New("non-striker is already out")
 		}
 	}
-	return false, nil
+
+	return nil
 }
 
 func PrepareDeliveryHelper(delivery *models.Delivery, liveMatchData models.LiveMatchDetails, req models.BallEventReq) {

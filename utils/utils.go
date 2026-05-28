@@ -8,10 +8,23 @@ import (
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/nyaruka/phonenumbers"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var accessSecret = []byte(os.Getenv("ACCESS_SECRET"))
+
+func ValidatePhoneNumber(phone string) (string, error) {
+	num, err := phonenumbers.Parse(phone, "IN")
+	if err != nil {
+		return "", err
+	}
+	if !phonenumbers.IsValidNumber(num) {
+		return "", errors.New("invalid phone number")
+	}
+
+	return phonenumbers.Format(num, phonenumbers.E164), nil
+}
 
 func HashPassword(password string) (string, error) {
 	hashed, err := bcrypt.GenerateFromPassword(
