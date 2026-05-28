@@ -2,13 +2,6 @@ package models
 
 import "time"
 
-type Player struct {
-	PlayerID  string `json:"playerID" db:"player_id"`
-	IsCaptain bool   `json:"isCaptain" db:"is_captain"`
-	Phone     string `json:"phone"`
-	Name      string `json:"name"`
-}
-
 type MatchData struct {
 	MatchID         string
 	CurrentInningID string

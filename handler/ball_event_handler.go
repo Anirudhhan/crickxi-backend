@@ -43,7 +43,7 @@ func BallEvent(ctx *gin.Context) {
 	}
 
 	if liveMatchData.IsCompleted {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("innings completed start next innings"), "innings completed start next innings")
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("innings ended. start next innings"), "innings ended. start next innings")
 		return
 	}
 
@@ -78,7 +78,7 @@ func BallEvent(ctx *gin.Context) {
 	}
 
 	if inningEnded {
-		ctx.JSON(http.StatusOK, gin.H{"message": "inning ended start new inning"})
+		ctx.JSON(http.StatusOK, gin.H{"message": "innings ended. start next innings"})
 		return
 	}
 	if matchEnded {
@@ -242,7 +242,7 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 		}
 
 		//update bowling scorecard
-		err = dbHelper.UpdateBowlingScoreCard(tx, delivery, legalBall, totalRuns, wides, noBall, wicket)
+		err = dbHelper.UpdateBowlingScorecard(tx, delivery, legalBall, totalRuns, wides, noBall, wicket)
 		if err != nil {
 			return err
 		}

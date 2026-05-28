@@ -7,12 +7,29 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func StartInning(tx *sqlx.Tx, matchID string, battingTeamID string, bowlingTeamID string, inningsOrder int, inningsType string) (InningID string, err error) {
+func StartInnings(tx *sqlx.Tx, matchID string, battingTeamID string, bowlingTeamID string, inningsOrder int, inningsType string) (InningsID string, err error) {
 	query := `INSERT INTO innings(match_id, batting_team_id, bowling_team_id, innings_order, innings_type) 
 				VALUES ($1, $2, $3, $4, $5) RETURNING id`
 
-	err = tx.Get(&InningID, query, matchID, battingTeamID, bowlingTeamID, inningsOrder, inningsType)
-	return InningID, err
+	err = tx.Get(&InningsID, query, matchID, battingTeamID, bowlingTeamID, inningsOrder, inningsType)
+	return InningsID, err
+}
+
+func UpdateInnings(tx *sqlx.Tx, delivery models.Delivery, totalRuns int, wicket int, legalBall int, extraWide int, extraNoBall int) error {
+
+	query := `UPDATE innings
+			SET total_runs = total_runs + $1,
+				wickets = wickets + $2,
+				legal_balls = legal_balls + $3,
+				extras = extras + $4,
+				extras_wides = extras_wides + $5,
+				extras_no_balls = extras_no_balls + $6,
+				updated_at = NOW()
+			WHERE id = $7`
+
+	_, err := tx.Exec(query, totalRuns, wicket, legalBall, delivery.RunsExtra, extraWide, extraNoBall, delivery.InningsID)
+
+	return err
 }
 
 func CreateBattingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {

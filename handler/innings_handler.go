@@ -9,9 +9,9 @@ import (
 )
 
 func GetOverDetails(ctx *gin.Context) {
-	inningID := ctx.Param("inningID")
+	inningsID := ctx.Param("inningsID")
 
-	overDetails, err := dbHelper.OverDetails(inningID)
+	overDetails, err := dbHelper.OverDetails(inningsID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return

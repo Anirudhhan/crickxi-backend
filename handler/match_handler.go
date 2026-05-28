@@ -100,7 +100,7 @@ func CreateMatch(ctx *gin.Context) {
 			bowlingPlayers = tossWinnerPlayers
 		}
 
-		inningID, err := dbHelper.StartInning(tx, matchData.MatchID, battingTeamID, bowlingTeamID, 1, "normal")
+		inningID, err := dbHelper.StartInnings(tx, matchData.MatchID, battingTeamID, bowlingTeamID, 1, "normal")
 		if err != nil {
 			return err
 		}
@@ -189,15 +189,15 @@ func GetMatchByID(ctx *gin.Context) {
 }
 
 func StartNextInnings(ctx *gin.Context) {
-	var nextInningReq models.StartNextInningsReq
+	var nextInningsReq models.StartNextInningsReq
 	matchID := ctx.Param("matchID")
 
-	if err := ctx.ShouldBindJSON(&nextInningReq); err != nil {
+	if err := ctx.ShouldBindJSON(&nextInningsReq); err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
 	}
 
-	err := ValidateBatterHelper(nextInningReq.StrikerID, nextInningReq.NonStrikerID, nextInningReq.BowlerID)
+	err := ValidateBatterHelper(nextInningsReq.StrikerID, nextInningsReq.NonStrikerID, nextInningsReq.BowlerID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
@@ -237,7 +237,7 @@ func StartNextInnings(ctx *gin.Context) {
 
 			bowlingTeamID := matchData.BattingTeamID
 
-			inningID, err := dbHelper.StartInning(tx, matchID, battingTeamID, bowlingTeamID, 2, "normal")
+			inningID, err := dbHelper.StartInnings(tx, matchID, battingTeamID, bowlingTeamID, 2, "normal")
 
 			if err != nil {
 				return err
@@ -267,7 +267,7 @@ func StartNextInnings(ctx *gin.Context) {
 				return err
 			}
 
-			err = dbHelper.ResetLiveMatchForNextInnings(tx, matchID, inningID, nextInningReq)
+			err = dbHelper.ResetLiveMatchForNextInnings(tx, matchID, inningID, nextInningsReq)
 
 			if err != nil {
 				return err

@@ -3,9 +3,19 @@ package dbHelper
 import (
 	"crickxi-backend/database"
 	"crickxi-backend/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
-func GetInningDetails(matchID string, inningOrder int) (inningDetails models.MatchScoreCard, err error) {
+func IsPlayerOut(inningsID string, playerID string) (isOut bool, err error) {
+	query := `SELECT is_out FROM batting_scorecards
+				WHERE innings_id = $1 AND player_id = $2`
+
+	err = database.DB.Get(&isOut, query, inningsID, playerID)
+	return isOut, err
+}
+
+func GetInningsDetails(matchID string, inningOrder int) (inningDetails models.MatchScoreCard, err error) {
 	query := `SELECT
 				bt.id AS batting_team_id,
 				bt.name AS batting_team_name,
@@ -24,7 +34,7 @@ func GetInningDetails(matchID string, inningOrder int) (inningDetails models.Mat
 	return inningDetails, err
 }
 
-func GetBattingScorecardByMatchIDAndInning(matchID string, inningOrder int) (
+func GetBattingScorecardByMatchIDAndInnings(matchID string, inningOrder int) (
 	battingScoreCard []models.BattingScoreCard, err error) {
 	query := `SELECT bsc.player_id, u.name, bsc.runs, bsc.balls, bsc.fours, bsc.sixes, bsc.is_out,
 				bsc.dismissal_type, du.name AS dismissal_by_name
@@ -46,7 +56,7 @@ func GetBattingScorecardByMatchIDAndInning(matchID string, inningOrder int) (
 	return battingScoreCard, err
 }
 
-func GetBowlingScorecardByMatchIDAndInning(matchID string, inningOrder int) (
+func GetBowlingScorecardByMatchIDAndInnings(matchID string, inningOrder int) (
 	bowlingScoreCard []models.BowlingScoreCard, err error) {
 	query := `SELECT bwsc.player_id, u.name, bwsc.legal_balls, bwsc.maidens, bwsc.runs_given, bwsc.no_balls, 
 				   bwsc.wides, bwsc.wickets
@@ -62,4 +72,46 @@ func GetBowlingScorecardByMatchIDAndInning(matchID string, inningOrder int) (
 
 	err = database.DB.Select(&bowlingScoreCard, query, matchID, inningOrder)
 	return bowlingScoreCard, err
+}
+
+func UpdateBatterStats(tx *sqlx.Tx, delivery models.Delivery, balls int, fours int, sixes int) error {
+	battingQuery := `UPDATE batting_scorecards
+					SET
+						runs = runs + $1,
+						balls = balls + $2,
+						fours = fours + $3,
+						sixes = sixes + $4,
+						updated_at = NOW()
+					WHERE innings_id = $5 AND player_id = $6`
+
+	_, err := tx.Exec(battingQuery, delivery.RunsBatter, balls, fours, sixes, delivery.InningsID, delivery.StrikerID)
+	return err
+}
+
+func UpdateDismissedBatter(tx *sqlx.Tx, delivery models.Delivery, dismissalBy *string) error {
+	battingQuery := `UPDATE batting_scorecards
+					SET
+						is_out = true,
+						dismissal_type = $1,
+						dismissal_by = $2,
+						updated_at = NOW()
+					WHERE innings_id = $3 AND player_id = $4`
+
+	_, err := tx.Exec(battingQuery, delivery.WicketType, dismissalBy, delivery.InningsID, delivery.WicketPlayerID)
+	return err
+}
+
+func UpdateBowlingScorecard(tx *sqlx.Tx, delivery models.Delivery, legalBall int, runs int, wides int, noBall int, wicket int) error {
+	query := `UPDATE bowling_scorecards
+				SET legal_balls = legal_balls + $1,
+					maidens = maidens + $2,
+					runs_given = runs_given + $3,
+					wides = wides + $4,
+					no_balls = no_balls + $5,
+					wickets = wickets + $6
+				WHERE innings_id = $7 AND player_id = $8`
+
+	_, err := tx.Exec(query, legalBall, 0, runs, wides, noBall, wicket, delivery.InningsID, delivery.BowlerID)
+
+	return err
 }

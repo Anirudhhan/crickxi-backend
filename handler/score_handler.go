@@ -12,11 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetScorecardByMatchIDAndInning(ctx *gin.Context) {
+func GetScorecardByMatchIDAndInnings(ctx *gin.Context) {
 	matchID := ctx.Param("matchID")
-	inningOrderStr := ctx.Param("inningOrder")
+	inningsOrderStr := ctx.Param("inningsOrder")
 
-	inningOrder, err := strconv.Atoi(inningOrderStr)
+	inningsOrder, err := strconv.Atoi(inningsOrderStr)
 
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest,
@@ -24,16 +24,16 @@ func GetScorecardByMatchIDAndInning(ctx *gin.Context) {
 		return
 	}
 
-	if matchID == "" || (inningOrder != 1 && inningOrder != 2) {
+	if matchID == "" || (inningsOrder != 1 && inningsOrder != 2) {
 		utils.ErrorResponse(ctx, http.StatusBadRequest,
 			errors.New("valid match ID and inning order are required"), "valid match ID and inning order are required")
 		return
 	}
 
 	var matchScoreCard models.MatchScoreCard
-	matchScoreCard.InningOrder = inningOrder
+	matchScoreCard.InningsOrder = inningsOrder
 
-	inningDetails, err := dbHelper.GetInningDetails(matchID, matchScoreCard.InningOrder)
+	inningDetails, err := dbHelper.GetInningsDetails(matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.ErrorResponse(ctx, http.StatusNotFound, err, "invalid match id")
@@ -48,13 +48,13 @@ func GetScorecardByMatchIDAndInning(ctx *gin.Context) {
 	matchScoreCard.BowlingTeamID = inningDetails.BowlingTeamID
 	matchScoreCard.BowlingTeamName = inningDetails.BowlingTeamName
 
-	battingScoreCard, err := dbHelper.GetBattingScorecardByMatchIDAndInning(matchID, matchScoreCard.InningOrder)
+	battingScoreCard, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return
 	}
 
-	bowlingScoreCard, err := dbHelper.GetBowlingScorecardByMatchIDAndInning(matchID, matchScoreCard.InningOrder)
+	bowlingScoreCard, err := dbHelper.GetBowlingScorecardByMatchIDAndInnings(matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return

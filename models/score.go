@@ -23,7 +23,7 @@ type BowlingScoreCard struct {
 }
 
 type MatchScoreCard struct {
-	InningOrder     int    `json:"inningOrder"`
+	InningsOrder    int    `json:"inningsOrder"`
 	BattingTeamID   string `json:"battingTeamID" db:"batting_team_id"`
 	BattingTeamName string `json:"battingTeamName" db:"batting_team_name"`
 
