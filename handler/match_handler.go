@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -135,7 +136,24 @@ func CreateMatch(ctx *gin.Context) {
 }
 
 func GetMatches(ctx *gin.Context) {
-	matches, err := dbHelper.GetMatches()
+	search := ctx.DefaultQuery("search", "")
+	status := ctx.DefaultQuery("status", "")
+
+	page, err := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	matches, err := dbHelper.GetMatches(search, status, page, limit)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get matches")
 		return
@@ -143,6 +161,9 @@ func GetMatches(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"matches": matches,
+		"status":  status,
+		"page":    page,
+		"total":   len(matches),
 	})
 }
 
