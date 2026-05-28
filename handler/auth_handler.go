@@ -90,6 +90,7 @@ func LoginUser(ctx *gin.Context) {
 		return
 	}
 
+	//TODO: check unauthorized hoga ig
 	if err := utils.CheckPasswordHash(loginUserReq.Password, *userDetails.HashPassword); err != nil {
 		utils.ErrorResponse(ctx, http.StatusForbidden, err, "invalid credentials")
 		return

@@ -67,11 +67,14 @@ func SetUpRoutes() *gin.Engine {
 
 		auth.POST("/match", handler.CreateMatch)
 
-		auth.POST("/matches/:matchID/balls", handler.BallEvent)
+		host := auth.Group("/")
+		host.Use(middleware.HostMiddleware())
 
-		auth.POST("/matches/:matchID/change-bowler", handler.ChangeBowler)
+		host.POST("/matches/:matchID/balls", handler.BallEvent)
 
-		auth.POST("/matches/:matchID/start-next-innings", handler.StartNextInnings)
+		host.POST("/matches/:matchID/change-bowler", handler.ChangeBowler)
+
+		host.POST("/matches/:matchID/start-next-innings", handler.StartNextInnings)
 	}
 
 	return router

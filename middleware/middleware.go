@@ -74,3 +74,34 @@ func AuthMiddleware() gin.HandlerFunc {
 		ctx.Next()
 	}
 }
+
+func HostMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		userID := ctx.GetString("user_id")
+		matchID := ctx.Param("matchID")
+
+		if matchID == "" {
+			utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("missing match id"), "missing match id")
+			ctx.Abort()
+			return
+		}
+
+		isValid, err := dbHelper.ValidateHostOrScorer(matchID, userID)
+		if err != nil {
+			utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
+			ctx.Abort()
+			return
+		}
+
+		if !isValid {
+			utils.ErrorResponse(ctx, http.StatusForbidden, errors.New("invalid access"), "invalid access")
+			ctx.Abort()
+			return
+		}
+
+		ctx.Set("match_id", matchID)
+
+		ctx.Next()
+	}
+}

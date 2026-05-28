@@ -181,7 +181,7 @@ func GetMatchByID(ctx *gin.Context) {
 			return
 		}
 
-		utils.ErrorResponse(ctx, http.StatusNotFound, err, "internal server error")
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return
 	}
 
@@ -190,7 +190,7 @@ func GetMatchByID(ctx *gin.Context) {
 
 func StartNextInnings(ctx *gin.Context) {
 	var nextInningsReq models.StartNextInningsReq
-	matchID := ctx.Param("matchID")
+	matchID := ctx.GetString("match_id")
 
 	if err := ctx.ShouldBindJSON(&nextInningsReq); err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
@@ -215,17 +215,17 @@ func StartNextInnings(ctx *gin.Context) {
 	}
 
 	if matchData.CurrentInningNo != 1 {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("second innings already started"), "second innings already started")
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("second innings already started"), "second innings already started")
 		return
 	}
 
 	if matchData.EndTime != nil {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("match already completed"), "match already completed")
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("match already completed"), "match already completed")
 		return
 	}
 
 	if !matchData.IsCompleted {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("first innings not completed"), "first innings not completed")
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("first innings not completed"), "first innings not completed")
 		return
 	}
 	//Transactions

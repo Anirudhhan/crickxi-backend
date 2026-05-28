@@ -16,11 +16,8 @@ import (
 func BallEvent(ctx *gin.Context) {
 	var req models.BallEventReq
 
-	matchID := ctx.Param("matchID")
-	if matchID == "" {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("missing match id"), "missing match id")
-		return
-	}
+	matchID := ctx.GetString("match_id")
+
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
 		return
@@ -38,12 +35,12 @@ func BallEvent(ctx *gin.Context) {
 	}
 
 	if liveMatchData.EndTime != nil {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("match already completed"), "match already completed")
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("match already completed"), "match already completed")
 		return
 	}
 
 	if liveMatchData.IsCompleted {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("innings ended. start next innings"), "innings ended. start next innings")
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("innings ended. start next innings"), "innings ended. start next innings")
 		return
 	}
 
@@ -64,7 +61,7 @@ func BallEvent(ctx *gin.Context) {
 		return
 	}
 	if isOut {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("batter is already out"), "batter is already out")
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("batter is already out"), "batter is already out")
 		return
 	}
 
@@ -418,7 +415,7 @@ func ChangeBowler(ctx *gin.Context) {
 		return
 	}
 
-	matchID := ctx.Param("matchID")
+	matchID := ctx.GetString("match_id")
 	validBowler, err := dbHelper.ValidateBowlerID(matchID, req.BowlerID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")

@@ -99,3 +99,21 @@ func ArchiveUserSessions(tx *sqlx.Tx, userID string) error {
 	_, err := tx.Exec(query, userID)
 	return err
 }
+
+func ValidateHostOrScorer(matchID string, userID string) (bool, error) {
+
+	query := `SELECT EXISTS(
+				SELECT 1
+				FROM matches
+				WHERE id = $1
+				AND (
+					host_id = $2
+					OR scorer1_id = $2
+					OR scorer2_id = $2
+				))`
+
+	var isValid bool
+
+	err := database.DB.Get(&isValid, query, matchID, userID)
+	return isValid, err
+}
