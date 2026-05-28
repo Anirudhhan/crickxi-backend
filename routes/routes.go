@@ -47,6 +47,7 @@ func SetUpRoutes() *gin.Engine {
 		v1.GET("/matches", handler.GetMatches)
 		v1.GET("/match/:matchID", handler.GetMatchByID)
 		v1.GET("/match/:matchID/scorecard/:inningOrder", handler.GetScorecardByMatchIDAndInning)
+		v1.GET("/innings/:inningID/overs", handler.GetOverDetails)
 	}
 
 	// protected routes

@@ -1,6 +1,7 @@
 package dbHelper
 
 import (
+	"crickxi-backend/database"
 	"crickxi-backend/models"
 
 	"github.com/jmoiron/sqlx"
@@ -52,4 +53,21 @@ func CompleteInnings(tx *sqlx.Tx, inningsID string) error {
 
 	_, err := tx.Exec(query, inningsID)
 	return err
+}
+
+func OverDetails(inningID string) (overDetails []models.OversDetails, err error) {
+	query := `SELECT
+				over_number,
+				ball_in_over,
+				is_free_hit,
+				runs_batter,
+				runs_extra,
+				extra_type,
+				is_wicket
+			FROM balls
+			WHERE innings_id = $1
+			ORDER BY ball_sequence ASC`
+
+	err = database.DB.Select(&overDetails, query, inningID)
+	return overDetails, err
 }
