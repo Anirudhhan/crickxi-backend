@@ -285,6 +285,10 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 						} else {
 							strikerID = *delivery.NextBatterID
 						}
+					} else if nonStrikerID != nil {
+						// last batter standing
+						strikerID = *nonStrikerID
+						nonStrikerID = nil
 					}
 				}
 
@@ -298,6 +302,8 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 						} else {
 							nonStrikerID = delivery.NextBatterID
 						}
+					} else {
+						nonStrikerID = nil
 					}
 				}
 			}
@@ -321,9 +327,9 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 		{
 			if liveMatchData.PreviousInningsScore != nil {
 				//handle score chased
-				liveMatchData.CurrentScore += delivery.RunsExtra + delivery.RunsBatter
+				currentScore := liveMatchData.CurrentScore + totalRuns
 				target := *liveMatchData.PreviousInningsScore
-				if liveMatchData.CurrentScore > target {
+				if currentScore > target {
 					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 					if err != nil {
 						return err
@@ -334,7 +340,7 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			}
 			if delivery.IsWicket {
 				//handle wicket ended
-				currentWickets := liveMatchData.Wickets + 1
+				currentWickets := liveMatchData.Wickets + inningsWicket
 				if currentWickets >= liveMatchData.BattingPlayerCount {
 					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 					if err != nil {
