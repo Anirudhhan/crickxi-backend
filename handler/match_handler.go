@@ -27,6 +27,11 @@ func CreateMatch(ctx *gin.Context) {
 		return
 	}
 
+	if createMatchReq.TeamAName == createMatchReq.TeamBName {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("both team can't have same name"), "both team can't have same name")
+		return
+	}
+
 	err := ValidateBattersHelper(createMatchReq.StrikerID, createMatchReq.NonStrikerID, createMatchReq.CurrentBowlerID)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest, err, err.Error())
