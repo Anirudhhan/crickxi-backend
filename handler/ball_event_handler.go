@@ -313,11 +313,11 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 
 		// Match Completion handling
 		{
+			liveMatchData.CurrentScore += totalRuns
 			if liveMatchData.PreviousInningsScore != nil {
 				//handle score chased
-				currentScore := liveMatchData.CurrentScore + totalRuns
 				target := *liveMatchData.PreviousInningsScore
-				if currentScore > target {
+				if liveMatchData.CurrentScore > target {
 					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 					if err != nil {
 						return err
