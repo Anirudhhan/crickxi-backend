@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -27,8 +28,11 @@ func CreateMatch(ctx *gin.Context) {
 		return
 	}
 
-	if createMatchReq.TeamAName == createMatchReq.TeamBName {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("both team can't have same name"), "both team can't have same name")
+	teamA := strings.ToLower(strings.TrimSpace(createMatchReq.TeamAName))
+	teamB := strings.ToLower(strings.TrimSpace(createMatchReq.TeamBName))
+
+	if teamA == teamB {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("both teams can't have the same name"), "both teams can't have the same name")
 		return
 	}
 
