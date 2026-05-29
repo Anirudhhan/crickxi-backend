@@ -53,7 +53,9 @@ func GetMatches(search string, status string, page int, limit int) (matches []mo
 				lm.current_bowler_id AS bowler_id,
 				bu.name AS bowler_name,
 				bwsc.runs_given AS bowler_runs_given,
-				bwsc.wickets AS bowler_wickets
+				bwsc.wickets AS bowler_wickets,
+			    COALESCE(pi.total_runs, 0)
+				AS previous_innings_score
 			
 			FROM matches m
 	
@@ -71,6 +73,9 @@ func GetMatches(search string, status string, page int, limit int) (matches []mo
 				ON bsc.player_id = sps.id AND lm.current_inning_id = bsc.innings_id
 			LEFT JOIN player_stats bps
 				ON lm.current_bowler_id = bps.id
+			LEFT JOIN innings pi
+				ON pi.match_id = m.id
+				AND pi.innings_order = m.current_inning_no - 1
 			LEFT JOIN users bu
 				ON bps.user_id = bu.id
 			LEFT JOIN bowling_scorecards bwsc
@@ -127,6 +132,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 				lm.current_inning_id AS current_inning_id,
 				lm.striker_id AS striker_id,
 				lm.non_striker_id AS non_striker_id,
+				lm.is_free_hit AS is_free_hit,
 				su.name AS striker_name,
 				bsc.runs AS striker_runs,
 				bsc.balls AS striker_balls,

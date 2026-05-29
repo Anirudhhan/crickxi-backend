@@ -55,6 +55,8 @@ type MatchCard struct {
 
 	MatchUpdatedAt *time.Time `db:"match_updated_at" json:"matchUpdatedAt"`
 
+	IsFreeHit bool `db:"is_free_hit" json:"isFreeHit"`
+
 	TeamAID   string `db:"team_a_id" json:"teamAID"`
 	TeamAName string `db:"team_a_name" json:"teamAName"`
 
