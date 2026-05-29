@@ -34,6 +34,7 @@ func GetMatches(search string, status string, page int, limit int) (matches []mo
 	query := `SELECT
 				m.id AS match_id,
 				m.toss_winner_team_id AS toss_winner_team_id,
+				m.winner_team_id AS winner_team_id, 
 				m.host_id AS host_id,
 				ta.id AS team_a_id,
 				ta.name AS team_a_name,
