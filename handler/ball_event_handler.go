@@ -253,7 +253,14 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 
 			// strike rotation
 			if nonStrikerID != nil {
-				totalMovementRuns := delivery.RunsBatter + delivery.RunsExtra
+				runningExtras := delivery.RunsExtra
+				if !delivery.IsLegalDelivery && delivery.ExtraType != nil {
+					if *delivery.ExtraType == "wide" || *delivery.ExtraType == "no_ball" {
+						runningExtras -= 1
+					}
+				}
+
+				totalMovementRuns := delivery.RunsBatter + runningExtras
 				if totalMovementRuns%2 == 1 {
 					temp := strikerID
 					strikerID = *nonStrikerID
@@ -266,25 +273,22 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 				// original striker out
 				if *delivery.WicketPlayerID == originalStrikerID {
 					if delivery.NextBatterID != nil {
-						// if strike rotated,
-						// new batter becomes non striker
 						if strikerID != originalStrikerID {
 							nonStrikerID = delivery.NextBatterID
 						} else {
 							strikerID = *delivery.NextBatterID
 						}
-					} else if nonStrikerID != nil {
-						// last batter standing
-						strikerID = *nonStrikerID
-						nonStrikerID = nil
+					} else {
+						if originalNonStrikerID != nil {
+							strikerID = *originalNonStrikerID
+							nonStrikerID = nil
+						}
 					}
 				}
 
-				// original non striker out
+				// original non-striker out
 				if originalNonStrikerID != nil && *delivery.WicketPlayerID == *originalNonStrikerID {
 					if delivery.NextBatterID != nil {
-						// if strike rotated,
-						// new batter becomes striker
 						if strikerID == *originalNonStrikerID {
 							strikerID = *delivery.NextBatterID
 						} else {
@@ -385,6 +389,10 @@ func HandleInningsOrMatchCompletion(tx *sqlx.Tx, liveMatchData models.LiveMatchD
 		if err != nil {
 			return err
 		}
+		err = UpdatePlayerCareerStats(tx, matchID, winnerTeamID)
+		if err != nil {
+			return err
+		}
 	}
 
 	if liveMatchData.CurrentInningNo == 1 {
@@ -425,4 +433,160 @@ func ChangeBowler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "bowler changed successfully"})
+}
+
+func UpdatePlayerCareerStats(tx *sqlx.Tx, matchID string, winnerTeamID *string) error {
+
+	for inningOrder := 1; inningOrder <= 2; inningOrder++ {
+
+		battingScorecards, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(tx, matchID, inningOrder)
+		if err != nil {
+			return err
+		}
+
+		matchPlayed := 0
+		if inningOrder == 2 {
+			matchPlayed = 1
+		}
+
+		for _, batting := range battingScorecards {
+
+			matchesWon := 0
+			matchesLost := 0
+
+			if winnerTeamID != nil {
+				if batting.TeamID == *winnerTeamID {
+					matchesWon = 1
+				} else {
+					matchesLost = 1
+				}
+			}
+
+			ducks := 0
+			goldenDucks := 0
+
+			if batting.IsOut && batting.Runs == 0 {
+				ducks = 1
+
+				if batting.Balls == 1 {
+					goldenDucks = 1
+				}
+			}
+
+			fifties := 0
+			if batting.Runs >= 50 && batting.Runs < 100 {
+				fifties = 1
+			}
+
+			hundreds := 0
+			if batting.Runs >= 100 {
+				hundreds = 1
+			}
+
+			inningsBatted := 0
+			if batting.Balls > 0 || batting.IsOut {
+				inningsBatted = 1
+			}
+
+			notOuts := 0
+			if inningsBatted == 1 && !batting.IsOut {
+				notOuts = 1
+			}
+
+			stats := models.UpdatePlayerStats{
+				Runs:          &batting.Runs,
+				BallsFaced:    &batting.Balls,
+				InningsBatted: &inningsBatted,
+				NotOuts:       &notOuts,
+				Fours:         &batting.Fours,
+				Sixes:         &batting.Sixes,
+
+				HighestScore: &batting.Runs,
+
+				Ducks:       &ducks,
+				GoldenDucks: &goldenDucks,
+				Fifties:     &fifties,
+				Hundreds:    &hundreds,
+
+				MatchesPlayed: &matchPlayed,
+				MatchesWon:    &matchesWon,
+				MatchesLost:   &matchesLost,
+			}
+
+			err = dbHelper.UpdatePlayerStats(
+				tx,
+				batting.PlayerID,
+				stats,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		bowlingScorecards, err := dbHelper.GetBowlingScorecardByMatchIDAndInnings(
+			tx,
+			matchID,
+			inningOrder,
+		)
+		if err != nil {
+			return err
+		}
+
+		for _, bowling := range bowlingScorecards {
+
+			inningsBowled := 0
+			if bowling.LegalBalls > 0 || bowling.Wides > 0 || bowling.NoBalls > 0 {
+				inningsBowled = 1
+			}
+
+			stats := models.UpdatePlayerStats{
+				Wickets:      &bowling.Wickets,
+				BallsBowled:  &bowling.LegalBalls,
+				RunsConceded: &bowling.RunsGiven,
+				MaidenOvers:  &bowling.Maidens,
+				Wides:        &bowling.Wides,
+				NoBalls:      &bowling.NoBalls,
+
+				BestWickets: &bowling.Wickets,
+				BestRuns:    &bowling.RunsGiven,
+
+				MatchesPlayed: &matchPlayed,
+				InningsBowled: &inningsBowled,
+			}
+
+			err = dbHelper.UpdatePlayerStats(
+				tx,
+				bowling.PlayerID,
+				stats,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	fieldingStats, err := dbHelper.GetFieldingStatsByMatchID(tx, matchID)
+	if err != nil {
+		return err
+	}
+
+	for _, fielding := range fieldingStats {
+
+		stats := models.UpdatePlayerStats{
+			Catches:   &fielding.Catches,
+			RunOuts:   &fielding.RunOuts,
+			Stumpings: &fielding.Stumpings,
+		}
+
+		err = dbHelper.UpdatePlayerStats(
+			tx,
+			fielding.PlayerID,
+			stats,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

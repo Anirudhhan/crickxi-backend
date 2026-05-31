@@ -48,13 +48,13 @@ func GetScorecardByMatchIDAndInnings(ctx *gin.Context) {
 	matchScoreCard.BowlingTeamID = inningDetails.BowlingTeamID
 	matchScoreCard.BowlingTeamName = inningDetails.BowlingTeamName
 
-	battingScoreCard, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(matchID, matchScoreCard.InningsOrder)
+	battingScoreCard, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(nil, matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return
 	}
 
-	bowlingScoreCard, err := dbHelper.GetBowlingScorecardByMatchIDAndInnings(matchID, matchScoreCard.InningsOrder)
+	bowlingScoreCard, err := dbHelper.GetBowlingScorecardByMatchIDAndInnings(nil, matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return

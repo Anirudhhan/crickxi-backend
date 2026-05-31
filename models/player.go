@@ -87,3 +87,47 @@ type CreateGuestPlayerRequest struct {
 	Name  string `json:"name" binding:"required,min=2"`
 	Phone string `json:"phone" binding:"required"`
 }
+
+type FieldingStats struct {
+	PlayerID  string `db:"fielder_id"`
+	Catches   int    `db:"catches"`
+	RunOuts   int    `db:"run_outs"`
+	Stumpings int    `db:"stumpings"`
+}
+type UpdatePlayerStats struct {
+	// batting
+	Runs          *int `json:"runs"`
+	BallsFaced    *int `json:"ballsFaced"`
+	InningsBatted *int `json:"inningsBatted"`
+	NotOuts       *int `json:"notOuts"`
+	Fours         *int `json:"fours"`
+	Sixes         *int `json:"sixes"`
+
+	HighestScore *int `json:"highestScore"`
+
+	Ducks       *int `json:"ducks"`
+	GoldenDucks *int `json:"goldenDucks"`
+	Fifties     *int `json:"fifties"`
+	Hundreds    *int `json:"hundreds"`
+
+	// bowling
+	Wickets       *int `json:"wickets"`
+	BallsBowled   *int `json:"ballsBowled"`
+	RunsConceded  *int `json:"runsConceded"`
+	MaidenOvers   *int `json:"maidenOvers"`
+	Wides         *int `json:"wides"`
+	NoBalls       *int `json:"noBalls"`
+	BestWickets   *int `json:"bestBowlingWickets"`
+	BestRuns      *int `json:"bestBowlingRuns"`
+	InningsBowled *int `json:"inningsBowled"`
+
+	// fielding
+	Catches   *int `json:"catches"`
+	RunOuts   *int `json:"runOuts"`
+	Stumpings *int `json:"stumpings"`
+
+	// matches
+	MatchesPlayed *int `json:"matchesPlayed"`
+	MatchesWon    *int `json:"matchesWon"`
+	MatchesLost   *int `json:"matchesLost"`
+}

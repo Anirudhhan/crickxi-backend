@@ -2,6 +2,7 @@ package models
 
 type BattingScoreCard struct {
 	PlayerID        string  `db:"player_id" json:"playerID"`
+	TeamID          string  `db:"batting_team_id"`
 	PlayerName      string  `db:"name" json:"playerName"`
 	Runs            int     `db:"runs" json:"runs"`
 	Balls           int     `db:"balls" json:"balls"`
@@ -13,6 +14,7 @@ type BattingScoreCard struct {
 }
 type BowlingScoreCard struct {
 	PlayerID   string `db:"player_id" json:"playerID"`
+	TeamID     string `db:"bowling_team_id"`
 	PlayerName string `db:"name" json:"playerName"`
 	LegalBalls int    `db:"legal_balls" json:"legalBalls"`
 	Maidens    int    `db:"maidens" json:"maidens"`

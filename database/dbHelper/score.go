@@ -34,9 +34,9 @@ func GetInningsDetails(matchID string, inningOrder int) (inningDetails models.Ma
 	return inningDetails, err
 }
 
-func GetBattingScorecardByMatchIDAndInnings(matchID string, inningOrder int) (
+func GetBattingScorecardByMatchIDAndInnings(tx *sqlx.Tx, matchID string, inningOrder int) (
 	battingScoreCard []models.BattingScoreCard, err error) {
-	query := `SELECT bsc.player_id, u.name, bsc.runs, bsc.balls, bsc.fours, bsc.sixes, bsc.is_out,
+	query := `SELECT bsc.player_id, u.name, i.batting_team_id, bsc.runs, bsc.balls, bsc.fours, bsc.sixes, bsc.is_out,
 				bsc.dismissal_type, du.name AS dismissal_by_name
 						from batting_scorecards bsc
 						JOIN player_stats ps
@@ -52,13 +52,17 @@ func GetBattingScorecardByMatchIDAndInnings(matchID string, inningOrder int) (
 				WHERE i.match_id = $1 AND i.innings_order = $2
 				ORDER BY bsc.batting_order_position`
 
-	err = database.DB.Select(&battingScoreCard, query, matchID, inningOrder)
+	if tx != nil {
+		err = tx.Select(&battingScoreCard, query, matchID, inningOrder)
+	} else {
+		err = database.DB.Select(&battingScoreCard, query, matchID, inningOrder)
+	}
 	return battingScoreCard, err
 }
 
-func GetBowlingScorecardByMatchIDAndInnings(matchID string, inningOrder int) (
+func GetBowlingScorecardByMatchIDAndInnings(tx *sqlx.Tx, matchID string, inningOrder int) (
 	bowlingScoreCard []models.BowlingScoreCard, err error) {
-	query := `SELECT bwsc.player_id, u.name, bwsc.legal_balls, bwsc.maidens, bwsc.runs_given, bwsc.no_balls, 
+	query := `SELECT bwsc.player_id, u.name, i.bowling_team_id, bwsc.legal_balls, bwsc.maidens, bwsc.runs_given, bwsc.no_balls, 
 				   bwsc.wides, bwsc.wickets
 			from bowling_scorecards bwsc
 					 JOIN player_stats ps
@@ -70,8 +74,48 @@ func GetBowlingScorecardByMatchIDAndInnings(matchID string, inningOrder int) (
 			WHERE i.match_id = $1 AND i.innings_order = $2
 			ORDER BY bwsc.legal_balls DESC, bwsc.runs_given ASC`
 
-	err = database.DB.Select(&bowlingScoreCard, query, matchID, inningOrder)
+	if tx != nil {
+
+		err = tx.Select(&bowlingScoreCard, query, matchID, inningOrder)
+	} else {
+		err = database.DB.Select(&bowlingScoreCard, query, matchID, inningOrder)
+	}
 	return bowlingScoreCard, err
+}
+
+func GetFieldingStatsByMatchID(tx *sqlx.Tx, matchID string) (stats []models.FieldingStats, err error) {
+	query := `
+			SELECT
+				b.fielder_id,
+		
+				COUNT(*) FILTER (
+					WHERE b.wicket_type = 'caught'
+				) AS catches,
+		
+				COUNT(*) FILTER (
+					WHERE b.wicket_type = 'run_out'
+				) AS run_outs,
+		
+				COUNT(*) FILTER (
+					WHERE b.wicket_type = 'stumped'
+				) AS stumpings
+		
+			FROM balls b
+			JOIN innings i
+				ON i.id = b.innings_id
+		
+			WHERE
+				i.match_id = $1
+				AND b.fielder_id IS NOT NULL
+		
+			GROUP BY b.fielder_id`
+
+	if tx != nil {
+		err = tx.Select(&stats, query, matchID)
+	} else {
+		err = database.DB.Select(&stats, query, matchID)
+	}
+	return stats, err
 }
 
 func UpdateBatterStats(tx *sqlx.Tx, delivery models.Delivery, balls int, fours int, sixes int) error {
