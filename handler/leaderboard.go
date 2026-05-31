@@ -32,3 +32,45 @@ func GetBattingLeaderboard(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, leaderboard)
 }
+
+func GetBowlingLeaderboard(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	if page < 1 {
+		page = 1
+	}
+
+	if limit < 1 {
+		limit = 10
+	}
+
+	leaderboard, err := dbHelper.GetBowlingLeaderboard(page, limit)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get bowling leaderboard")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, leaderboard)
+}
+
+func GetFieldingLeaderboard(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	if page < 1 {
+		page = 1
+	}
+
+	if limit < 1 {
+		limit = 10
+	}
+
+	leaderboard, err := dbHelper.GetFieldingLeaderboard(page, limit)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get fielding leaderboard")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, leaderboard)
+}

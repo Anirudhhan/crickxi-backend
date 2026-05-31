@@ -50,6 +50,10 @@ func SetUpRoutes() *gin.Engine {
 		v1.GET("/innings/:inningsID/overs", handler.GetOverDetails)
 
 		v1.GET("/leaderboard/batting", handler.GetBattingLeaderboard)
+
+		v1.GET("/leaderboard/bowling", handler.GetBowlingLeaderboard)
+
+		v1.GET("/leaderboard/fielding", handler.GetFieldingLeaderboard)
 	}
 
 	// protected routes
