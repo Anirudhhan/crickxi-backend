@@ -29,7 +29,7 @@ func GetLastBall(matchID string) (ball models.Delivery, err error) {
               FROM balls b
               JOIN innings i ON i.id = b.innings_id
               WHERE i.match_id = $1 AND b.archived_at IS NULL
-              ORDER BY b.ball_sequence DESC
+              ORDER BY i.innings_order DESC, b.ball_sequence DESC
               LIMIT 1`
 
 	err = database.DB.Get(&ball, query, matchID)

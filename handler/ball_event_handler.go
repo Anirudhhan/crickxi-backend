@@ -641,6 +641,12 @@ func UndoBall(ctx *gin.Context) {
 		return
 	}
 
+	// allow undoing balls from the CURRENT inning (shouldnt go back to prev inning)
+	if lastBall.InningsID != liveMatchData.CurrentInningID {
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("cannot undo balls from a previous inning"), "previous inning locked")
+		return
+	}
+
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
 		err = dbHelper.ArchiveBall(tx, lastBall.InningsID, lastBall.BallSequence)
 		if err != nil {
