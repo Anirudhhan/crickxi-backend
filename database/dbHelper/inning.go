@@ -82,7 +82,7 @@ func OverDetails(inningID string) (overDetails []models.OversDetails, err error)
 				extra_type,
 				is_wicket
 			FROM balls
-			WHERE innings_id = $1
+			WHERE innings_id = $1 AND archived_at IS NULL
 			ORDER BY ball_sequence ASC`
 
 	err = database.DB.Select(&overDetails, query, inningID)

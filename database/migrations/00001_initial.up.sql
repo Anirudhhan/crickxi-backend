@@ -246,6 +246,10 @@ CREATE TABLE IF NOT EXISTS balls (
     UNIQUE(innings_id, ball_sequence)
 );
 
+CREATE UNIQUE INDEX idx_balls_innings_sequence_active
+    ON balls(innings_id, ball_sequence)
+    WHERE archived_at IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_balls_over
     ON balls(innings_id, over_number);
 

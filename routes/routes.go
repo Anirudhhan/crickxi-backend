@@ -80,6 +80,8 @@ func SetUpRoutes() *gin.Engine {
 
 		host.POST("/matches/:matchID/change-bowler", handler.ChangeBowler)
 
+		host.POST("/matches/:matchID/undo", handler.UndoBall)
+
 		host.POST("/matches/:matchID/start-next-innings", handler.StartNextInnings)
 	}
 

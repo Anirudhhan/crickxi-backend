@@ -162,193 +162,203 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			return err
 		}
 
-		legalBall := 0
-		if delivery.IsLegalDelivery {
-			legalBall = 1
-		}
+		return ApplyBallStats(tx, delivery, liveMatchData, matchID, inningEnded, matchEnded)
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-		fours := 0
-		if delivery.RunsBatter == 4 {
-			fours = 1
-		}
+func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+	legalBall := 0
+	if delivery.IsLegalDelivery {
+		legalBall = 1
+	}
 
-		sixes := 0
-		if delivery.RunsBatter == 6 {
-			sixes = 1
-		}
+	fours := 0
+	if delivery.RunsBatter == 4 {
+		fours = 1
+	}
 
-		totalRuns := delivery.RunsBatter + delivery.RunsExtra
-		wides := 0
-		noBall := 0
-		extraWide := 0
-		extraNoBall := 0
-		nextFreeHit := false
+	sixes := 0
+	if delivery.RunsBatter == 6 {
+		sixes = 1
+	}
 
-		if !delivery.IsLegalDelivery {
-			if delivery.ExtraType != nil {
-				if *delivery.ExtraType == "wide" {
-					extraWide = delivery.RunsExtra
-					wides += 1
-				}
-				if *delivery.ExtraType == "no_ball" {
-					extraNoBall = delivery.RunsExtra
-					noBall += 1
+	totalRuns := delivery.RunsBatter + delivery.RunsExtra
+	wides := 0
+	noBall := 0
+	extraWide := 0
+	extraNoBall := 0
+	nextFreeHit := false
+
+	if !delivery.IsLegalDelivery {
+		if delivery.ExtraType != nil {
+			if *delivery.ExtraType == "wide" {
+				extraWide = delivery.RunsExtra
+				wides += 1
+				if delivery.IsFreeHit {
 					nextFreeHit = true
 				}
 			}
+			if *delivery.ExtraType == "no_ball" {
+				extraNoBall = delivery.RunsExtra
+				noBall += 1
+				nextFreeHit = true
+			}
+		}
+	}
+
+	//update batting scoreCard
+	err := dbHelper.UpdateBatterStats(tx, delivery, legalBall, fours, sixes)
+	if err != nil {
+		return err
+	}
+
+	//Update dismissed player
+	wicket := 0
+	inningsWicket := 0
+	if delivery.IsWicket && delivery.WicketPlayerID != nil {
+		var dismissalBy *string
+		if delivery.WicketType != nil {
+			switch *delivery.WicketType {
+			case "bowled", "caught", "lbw", "stumped", "hit_wicket":
+				wicket = 1
+				inningsWicket = 1
+				dismissalBy = &delivery.BowlerID
+			case "run_out":
+				inningsWicket = 1
+				if delivery.FielderID != nil {
+					dismissalBy = delivery.FielderID
+				}
+			}
 		}
 
-		//update batting scoreCard
-		err = dbHelper.UpdateBatterStats(tx, delivery, legalBall, fours, sixes)
+		err = dbHelper.UpdateDismissedBatter(tx, delivery, dismissalBy)
 		if err != nil {
 			return err
 		}
+	}
 
-		//Update dismissed player
-		wicket := 0
-		inningsWicket := 0
+	//update bowling scorecard
+	err = dbHelper.UpdateBowlingScorecard(tx, delivery, legalBall, totalRuns, wides, noBall, wicket)
+	if err != nil {
+		return err
+	}
+
+	//Update innings
+	err = dbHelper.UpdateInnings(tx, delivery, totalRuns, inningsWicket, legalBall, extraWide, extraNoBall)
+	if err != nil {
+		return err
+	}
+
+	//update live match
+	{
+		// original positions before ball
+		originalStrikerID := delivery.StrikerID
+		originalNonStrikerID := delivery.NonStrikerID
+
+		// current positions after ball movement
+		strikerID := delivery.StrikerID
+		nonStrikerID := delivery.NonStrikerID
+
+		// strike rotation
+		if nonStrikerID != nil {
+			runningExtras := delivery.RunsExtra
+			if !delivery.IsLegalDelivery && delivery.ExtraType != nil {
+				if *delivery.ExtraType == "wide" || *delivery.ExtraType == "no_ball" {
+					runningExtras -= 1
+				}
+			}
+
+			totalMovementRuns := delivery.RunsBatter + runningExtras
+			if totalMovementRuns%2 == 1 {
+				temp := strikerID
+				strikerID = *nonStrikerID
+				nonStrikerID = &temp
+			}
+		}
+
+		// wicket handling
 		if delivery.IsWicket && delivery.WicketPlayerID != nil {
-			var dismissalBy *string
-			if delivery.WicketType != nil {
-				switch *delivery.WicketType {
-				case "bowled", "caught", "lbw", "stumped", "hit_wicket":
-					wicket = 1
-					inningsWicket = 1
-					dismissalBy = &delivery.BowlerID
-				case "run_out":
-					inningsWicket = 1
-					if delivery.FielderID != nil {
-						dismissalBy = delivery.FielderID
-					}
-				}
-			}
-
-			err = dbHelper.UpdateDismissedBatter(tx, delivery, dismissalBy)
-			if err != nil {
-				return err
-			}
-		}
-
-		//update bowling scorecard
-		err = dbHelper.UpdateBowlingScorecard(tx, delivery, legalBall, totalRuns, wides, noBall, wicket)
-		if err != nil {
-			return err
-		}
-
-		//Update innings
-		err = dbHelper.UpdateInnings(tx, delivery, totalRuns, inningsWicket, legalBall, extraWide, extraNoBall)
-		if err != nil {
-			return err
-		}
-
-		//update live match
-		{
-			// original positions before ball
-			originalStrikerID := delivery.StrikerID
-			originalNonStrikerID := delivery.NonStrikerID
-
-			// current positions after ball movement
-			strikerID := delivery.StrikerID
-			nonStrikerID := delivery.NonStrikerID
-
-			// strike rotation
-			if nonStrikerID != nil {
-				runningExtras := delivery.RunsExtra
-				if !delivery.IsLegalDelivery && delivery.ExtraType != nil {
-					if *delivery.ExtraType == "wide" || *delivery.ExtraType == "no_ball" {
-						runningExtras -= 1
-					}
-				}
-
-				totalMovementRuns := delivery.RunsBatter + runningExtras
-				if totalMovementRuns%2 == 1 {
-					temp := strikerID
-					strikerID = *nonStrikerID
-					nonStrikerID = &temp
-				}
-			}
-
-			// wicket handling
-			if delivery.IsWicket && delivery.WicketPlayerID != nil {
-				// original striker out
-				if *delivery.WicketPlayerID == originalStrikerID {
-					if delivery.NextBatterID != nil {
-						if strikerID != originalStrikerID {
-							nonStrikerID = delivery.NextBatterID
-						} else {
-							strikerID = *delivery.NextBatterID
-						}
+			// original striker out
+			if *delivery.WicketPlayerID == originalStrikerID {
+				if delivery.NextBatterID != nil {
+					// if strike rotated (now at non-striker end),
+					// new batter becomes non-striker
+					if strikerID != originalStrikerID {
+						nonStrikerID = delivery.NextBatterID
 					} else {
-						if originalNonStrikerID != nil {
-							strikerID = *originalNonStrikerID
-							nonStrikerID = nil
-						}
+						// if strike didn't rotate (still at striker end),
+						// new batter becomes striker
+						strikerID = *delivery.NextBatterID
 					}
-				}
-
-				// original non-striker out
-				if originalNonStrikerID != nil && *delivery.WicketPlayerID == *originalNonStrikerID {
-					if delivery.NextBatterID != nil {
-						if strikerID == *originalNonStrikerID {
-							strikerID = *delivery.NextBatterID
-						} else {
-							nonStrikerID = delivery.NextBatterID
-						}
-					} else {
+				} else {
+					// LAST WICKET/NO NEXT BATTER
+					// If striker is out and no one is coming in,
+					// the person who was NOT out (the non-striker) must become the striker
+					if originalNonStrikerID != nil {
+						strikerID = *originalNonStrikerID
 						nonStrikerID = nil
 					}
 				}
 			}
 
-			// over completed
-			newLegalBalls := delivery.LegalBalls + legalBall
-			if legalBall == 1 && newLegalBalls%6 == 0 {
-				if nonStrikerID != nil {
-					temp := strikerID
-					strikerID = *nonStrikerID
-					nonStrikerID = &temp
+			// original non-striker out
+			if originalNonStrikerID != nil && *delivery.WicketPlayerID == *originalNonStrikerID {
+				if delivery.NextBatterID != nil {
+					// if strike rotated (now at striker end),
+					// new batter becomes striker
+					if strikerID == *originalNonStrikerID {
+						strikerID = *delivery.NextBatterID
+					} else {
+						// if strike didn't rotate (still at non-striker end),
+						// new batter becomes non-striker
+						nonStrikerID = delivery.NextBatterID
+					}
+				} else {
+					// LAST WICKET/NO NEXT BATTER
+					// Non-striker is out, striker stays as striker
+					nonStrikerID = nil
 				}
-			}
-			err = dbHelper.UpdateLiveMatch(tx, delivery, matchID, totalRuns, inningsWicket, legalBall, strikerID, nonStrikerID, nextFreeHit)
-			if err != nil {
-				return err
 			}
 		}
 
-		// Match Completion handling
-		{
-			liveMatchData.CurrentScore += totalRuns
-			if liveMatchData.PreviousInningsScore != nil {
-				//handle score chased
-				target := *liveMatchData.PreviousInningsScore
-				if liveMatchData.CurrentScore > target {
-					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
-					if err != nil {
-						return err
-					}
+		// over completed
+		newLegalBalls := delivery.LegalBalls + legalBall
+		if legalBall == 1 && newLegalBalls%6 == 0 {
+			if nonStrikerID != nil {
+				temp := strikerID
+				strikerID = *nonStrikerID
+				nonStrikerID = &temp
+			}
+		}
+		err = dbHelper.UpdateLiveMatch(tx, delivery, matchID, totalRuns, inningsWicket, legalBall, strikerID, nonStrikerID, nextFreeHit)
+		if err != nil {
+			return err
+		}
+	}
 
-					return nil
+	// Match Completion handling
+	{
+		liveMatchData.CurrentScore += totalRuns
+		if liveMatchData.PreviousInningsScore != nil {
+			//handle score chased
+			target := *liveMatchData.PreviousInningsScore
+			if liveMatchData.CurrentScore > target {
+				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
+				if err != nil {
+					return err
 				}
-			}
-			if delivery.IsWicket {
-				//handle wicket ended
-				currentWickets := liveMatchData.Wickets + inningsWicket
-				if currentWickets >= liveMatchData.BattingPlayerCount {
-					err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
-					if err != nil {
-						return err
-					}
 
-					return nil
-				}
+				return nil
 			}
-
-			//handle over/inning ended
-			currentLegalBalls := liveMatchData.LegalBalls
-			if delivery.IsLegalDelivery {
-				currentLegalBalls++
-			}
-			if currentLegalBalls >= liveMatchData.OversPerSide*6 {
+		}
+		if delivery.IsWicket {
+			//handle wicket ended
+			currentWickets := liveMatchData.Wickets + inningsWicket
+			if currentWickets >= liveMatchData.BattingPlayerCount {
 				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 				if err != nil {
 					return err
@@ -358,11 +368,21 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			}
 		}
 
-		return nil
-	})
-	if err != nil {
-		return err
+		//handle over/inning ended
+		currentLegalBalls := liveMatchData.LegalBalls
+		if delivery.IsLegalDelivery {
+			currentLegalBalls++
+		}
+		if currentLegalBalls >= liveMatchData.OversPerSide*6 {
+			err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
 	}
+
 	return nil
 }
 
@@ -589,4 +609,115 @@ func UpdatePlayerCareerStats(tx *sqlx.Tx, matchID string, winnerTeamID *string) 
 	}
 
 	return nil
+}
+
+func UndoBall(ctx *gin.Context) {
+	matchID := ctx.GetString("match_id")
+
+	liveMatchData, err := dbHelper.GetLiveMatchDetails(matchID)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get match details")
+		return
+	}
+
+	// if match is already completed, do not allow undo
+	matchCard, err := dbHelper.GetMatchByID(matchID)
+	if err != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get match card")
+		return
+	}
+	if matchCard.MatchStatus == "completed" {
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("cannot undo after match is completed"), "match already completed")
+		return
+	}
+
+	lastBall, err := dbHelper.GetLastBall(matchID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.ErrorResponse(ctx, http.StatusNotFound, err, "no balls to undo")
+			return
+		}
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get last ball")
+		return
+	}
+
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		err = dbHelper.ArchiveBall(tx, lastBall.InningsID, lastBall.BallSequence)
+		if err != nil {
+			return err
+		}
+
+		err = dbHelper.ResetInningsStats(tx, lastBall.InningsID)
+		if err != nil {
+			return err
+		}
+		err = dbHelper.ResetScorecards(tx, lastBall.InningsID)
+		if err != nil {
+			return err
+		}
+
+		activeBalls, err := dbHelper.GetAllActiveBalls(tx, lastBall.InningsID)
+		if err != nil {
+			return err
+		}
+
+		var strikerID, bowlerID string
+		var nonStrikerID *string
+
+		if len(activeBalls) > 0 {
+			strikerID, nonStrikerID, bowlerID, err = dbHelper.GetInitialInningsState(tx, lastBall.InningsID)
+			if err != nil {
+				return err
+			}
+		} else {
+			strikerID = lastBall.StrikerID
+			nonStrikerID = lastBall.NonStrikerID
+			bowlerID = lastBall.BowlerID
+		}
+
+		err = dbHelper.ResetLiveMatchStats(tx, matchID, strikerID, nonStrikerID, bowlerID)
+		if err != nil {
+			return err
+		}
+
+		recalcMatchData := liveMatchData
+		recalcMatchData.CurrentScore = 0
+		recalcMatchData.Wickets = 0
+		recalcMatchData.LegalBalls = 0
+		recalcMatchData.IsCompleted = false
+		recalcMatchData.IsFreeHit = false
+
+		for _, ball := range activeBalls {
+			ball.LegalBalls = recalcMatchData.LegalBalls
+
+			var inningEnded, matchEnded bool
+			err = ApplyBallStats(tx, ball, recalcMatchData, matchID, &inningEnded, &matchEnded)
+			if err != nil {
+				return err
+			}
+
+			totalRuns := ball.RunsBatter + ball.RunsExtra
+			recalcMatchData.CurrentScore += totalRuns
+			if ball.IsLegalDelivery {
+				recalcMatchData.LegalBalls++
+			}
+			if ball.IsWicket {
+				recalcMatchData.Wickets++
+			}
+			if !ball.IsLegalDelivery && ball.ExtraType != nil && *ball.ExtraType == "no_ball" {
+				recalcMatchData.IsFreeHit = true
+			} else if ball.IsLegalDelivery {
+				recalcMatchData.IsFreeHit = false
+			}
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to undo ball")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "ball undone successfully"})
 }
