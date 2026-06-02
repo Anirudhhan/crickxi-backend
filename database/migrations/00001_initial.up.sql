@@ -241,9 +241,7 @@ CREATE TABLE IF NOT EXISTS balls (
     wicket_player_id UUID REFERENCES player_stats(id),
     fielder_id UUID REFERENCES player_stats(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    archived_at TIMESTAMPTZ,
-
-    UNIQUE(innings_id, ball_sequence)
+    archived_at TIMESTAMPTZ
 );
 
 CREATE UNIQUE INDEX idx_balls_innings_sequence_active
