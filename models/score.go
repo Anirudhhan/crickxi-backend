@@ -32,6 +32,9 @@ type MatchScoreCard struct {
 	BowlingTeamID   string `json:"bowlingTeamID" db:"bowling_team_id"`
 	BowlingTeamName string `json:"bowlingTeamName" db:"bowling_team_name"`
 
+	TotalRuns int `json:"totalRuns" db:"total_runs"`
+	Extras    int `json:"extras" db:"extras"`
+
 	BattingScoreCard []BattingScoreCard `json:"battingScoreCard"`
 	BowlingScoreCard []BowlingScoreCard `json:"bowlingScoreCard"`
 }

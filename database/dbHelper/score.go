@@ -19,6 +19,8 @@ func GetInningsDetails(matchID string, inningOrder int) (inningDetails models.Ma
 	query := `SELECT
 				bt.id AS batting_team_id,
 				bt.name AS batting_team_name,
+				i.total_runs AS total_runs,
+				i.extras AS extras,
 				bwt.id AS bowling_team_id,
 				bwt.name AS bowling_team_name
 			FROM innings i

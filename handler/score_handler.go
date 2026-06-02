@@ -48,6 +48,9 @@ func GetScorecardByMatchIDAndInnings(ctx *gin.Context) {
 	matchScoreCard.BowlingTeamID = inningDetails.BowlingTeamID
 	matchScoreCard.BowlingTeamName = inningDetails.BowlingTeamName
 
+	matchScoreCard.TotalRuns = inningDetails.TotalRuns
+	matchScoreCard.Extras = inningDetails.Extras
+
 	battingScoreCard, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(nil, matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
