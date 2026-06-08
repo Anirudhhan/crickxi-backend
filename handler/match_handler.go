@@ -28,6 +28,11 @@ func CreateMatch(ctx *gin.Context) {
 		return
 	}
 
+	if createMatchReq.Overs <= 0 {
+		utils.ErrorResponse(ctx, http.StatusBadRequest, errors.New("over should be greater than 0"), "over should be greater than 0")
+		return
+	}
+
 	teamA := strings.ToLower(strings.TrimSpace(createMatchReq.TeamAName))
 	teamB := strings.ToLower(strings.TrimSpace(createMatchReq.TeamBName))
 
@@ -107,6 +112,18 @@ func CreateMatch(ctx *gin.Context) {
 			battingPlayers = tossLostPlayers
 			bowlingTeamID = tossWinnerTeamID
 			bowlingPlayers = tossWinnerPlayers
+		}
+
+		if !IsPlayerInTeam(battingPlayers, createMatchReq.StrikerID) {
+			return errors.New("striker must be in the batting team")
+		}
+
+		if createMatchReq.NonStrikerID != nil && !IsPlayerInTeam(battingPlayers, *createMatchReq.NonStrikerID) {
+			return errors.New("non-striker must be in the batting team")
+		}
+
+		if !IsPlayerInTeam(bowlingPlayers, createMatchReq.CurrentBowlerID) {
+			return errors.New("bowler must be in the bowling team")
 		}
 
 		inningID, err := dbHelper.StartInnings(tx, matchData.MatchID, battingTeamID, bowlingTeamID, 1, "normal")
@@ -264,6 +281,18 @@ func StartNextInnings(ctx *gin.Context) {
 				return err
 			}
 
+			if !IsPlayerInTeam(battingPlayers, nextInningsReq.StrikerID) {
+				return errors.New("striker must be in the batting team")
+			}
+
+			if nextInningsReq.NonStrikerID != nil && !IsPlayerInTeam(battingPlayers, *nextInningsReq.NonStrikerID) {
+				return errors.New("non-striker must be in the batting team")
+			}
+
+			if !IsPlayerInTeam(bowlingPlayers, nextInningsReq.BowlerID) {
+				return errors.New("bowler must be in the bowling team")
+			}
+
 			err = dbHelper.CreateBattingScorecards(tx, inningID, battingPlayers)
 
 			if err != nil {
@@ -302,6 +331,15 @@ func StartNextInnings(ctx *gin.Context) {
 		"message": "second innings started",
 	})
 
+}
+
+func IsPlayerInTeam(players []models.Player, playerID string) bool {
+	for _, p := range players {
+		if p.PlayerID == playerID {
+			return true
+		}
+	}
+	return false
 }
 
 func ValidateBattersHelper(strikerID string, nonStrikerID *string, bowlerID string) error {
