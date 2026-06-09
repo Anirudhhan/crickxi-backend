@@ -37,7 +37,8 @@ CREATE TYPE wicket_type AS ENUM (
     'run_out',
     'stumped',
     'hit_wicket',
-    'retired_hurt'
+    'retired_hurt',
+    'retired_out'
 );
 
 CREATE TYPE extra_type AS ENUM (

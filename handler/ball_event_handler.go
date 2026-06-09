@@ -150,6 +150,11 @@ func PrepareDeliveryHelper(delivery *models.Delivery, liveMatchData models.LiveM
 		delivery.WicketPlayerID = req.WicketPlayerID
 		delivery.FielderID = req.FielderID
 		delivery.NextBatterID = req.NextBatterID
+
+		if req.WicketType != nil && (*req.WicketType == "retired_hurt" || *req.WicketType == "retired_out") {
+			delivery.IsLegalDelivery = false
+			delivery.BallInOver = liveMatchData.LegalBalls % 6
+		}
 	}
 
 }
@@ -221,6 +226,7 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 	inningsWicket := 0
 	if delivery.IsWicket && delivery.WicketPlayerID != nil {
 		var dismissalBy *string
+		isOut := true
 		if delivery.WicketType != nil {
 			switch *delivery.WicketType {
 			case "bowled", "caught", "lbw", "stumped", "hit_wicket":
@@ -232,10 +238,17 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 				if delivery.FielderID != nil {
 					dismissalBy = delivery.FielderID
 				}
+			case "retired_hurt":
+				wicket = 0
+				inningsWicket = 0
+				isOut = false
+			case "retired_out":
+				wicket = 0
+				inningsWicket = 1
 			}
 		}
 
-		err = dbHelper.UpdateDismissedBatter(tx, delivery, dismissalBy)
+		err = dbHelper.UpdateDismissedBatter(tx, delivery, dismissalBy, isOut)
 		if err != nil {
 			return err
 		}
@@ -504,7 +517,7 @@ func UpdatePlayerCareerStats(tx *sqlx.Tx, matchID string, winnerTeamID *string) 
 			}
 
 			inningsBatted := 0
-			if batting.Balls > 0 || batting.IsOut {
+			if batting.Balls > 0 || batting.IsOut || batting.DismissalType != nil {
 				inningsBatted = 1
 			}
 

@@ -134,16 +134,16 @@ func UpdateBatterStats(tx *sqlx.Tx, delivery models.Delivery, balls int, fours i
 	return err
 }
 
-func UpdateDismissedBatter(tx *sqlx.Tx, delivery models.Delivery, dismissalBy *string) error {
+func UpdateDismissedBatter(tx *sqlx.Tx, delivery models.Delivery, dismissalBy *string, isOut bool) error {
 	battingQuery := `UPDATE batting_scorecards
 					SET
-						is_out = true,
-						dismissal_type = $1,
-						dismissal_by = $2,
+						is_out = $1,
+						dismissal_type = $2,
+						dismissal_by = $3,
 						updated_at = NOW()
-					WHERE innings_id = $3 AND player_id = $4`
+					WHERE innings_id = $4 AND player_id = $5`
 
-	_, err := tx.Exec(battingQuery, delivery.WicketType, dismissalBy, delivery.InningsID, delivery.WicketPlayerID)
+	_, err := tx.Exec(battingQuery, isOut, delivery.WicketType, dismissalBy, delivery.InningsID, delivery.WicketPlayerID)
 	return err
 }
 

@@ -8,6 +8,7 @@ type OversDetails struct {
 	RunsExtra  int     `db:"runs_extra"`
 	ExtraType  *string `db:"extra_type"`
 	IsWicket   bool    `db:"is_wicket"`
+	WicketType *string `db:"wicket_type"`
 }
 type OverBall struct {
 	Ball    string `json:"ball"`
