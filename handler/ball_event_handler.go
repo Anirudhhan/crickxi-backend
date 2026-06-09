@@ -727,7 +727,9 @@ func UndoBall(ctx *gin.Context) {
 				recalcMatchData.LegalBalls++
 			}
 			if ball.IsWicket {
-				recalcMatchData.Wickets++
+				if ball.WicketType != nil && *ball.WicketType != "retired_hurt" {
+					recalcMatchData.Wickets++
+				}
 			}
 			if !ball.IsLegalDelivery && ball.ExtraType != nil && *ball.ExtraType == "no_ball" {
 				recalcMatchData.IsFreeHit = true
