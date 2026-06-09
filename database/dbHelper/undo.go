@@ -44,7 +44,7 @@ func ResetLiveMatchStats(tx *sqlx.Tx, matchID string, strikerID string, nonStrik
 func GetAllActiveBalls(tx *sqlx.Tx, inningsID string) (balls []models.Delivery, err error) {
 	query := `SELECT innings_id, ball_sequence, over_number, ball_in_over, is_free_hit, 
                      is_legal_delivery, striker_id, non_striker_id, bowler_id, runs_batter, 
-                     runs_extra, extra_type, is_wicket, wicket_type, wicket_player_id, fielder_id 
+                     runs_extra, extra_type, is_wicket, wicket_type, wicket_player_id, fielder_id, next_batter_id
               FROM balls 
               WHERE innings_id = $1 AND archived_at IS NULL 
               ORDER BY ball_sequence ASC`

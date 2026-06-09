@@ -28,5 +28,5 @@ type Delivery struct {
 	WicketType      *string `db:"wicket_type"`
 	WicketPlayerID  *string `db:"wicket_player_id"`
 	FielderID       *string `db:"fielder_id"`
-	NextBatterID    *string
+	NextBatterID    *string `db:"next_batter_id"`
 }

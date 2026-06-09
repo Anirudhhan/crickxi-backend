@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE balls ADD COLUMN IF NOT EXISTS next_batter_id UUID REFERENCES player_stats(id);
+COMMIT;
