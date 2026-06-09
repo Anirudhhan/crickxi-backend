@@ -120,7 +120,7 @@ func GetFieldingStatsByMatchID(tx *sqlx.Tx, matchID string) (stats []models.Fiel
 	return stats, err
 }
 
-func UpdateBatterStats(tx *sqlx.Tx, delivery models.Delivery, balls int, fours int, sixes int) error {
+func UpdateBatterScorecard(tx *sqlx.Tx, delivery models.Delivery, balls int, fours int, sixes int) error {
 	battingQuery := `UPDATE batting_scorecards
 					SET
 						runs = runs + $1,
@@ -144,6 +144,15 @@ func UpdateDismissedBatter(tx *sqlx.Tx, delivery models.Delivery, dismissalBy *s
 					WHERE innings_id = $4 AND player_id = $5`
 
 	_, err := tx.Exec(battingQuery, isOut, delivery.WicketType, dismissalBy, delivery.InningsID, delivery.WicketPlayerID)
+	return err
+}
+
+func ClearBattersDismissal(tx *sqlx.Tx, inningsID string, strikerID string, nonStrikerID *string) error {
+	query := `UPDATE batting_scorecards 
+              SET dismissal_type = NULL, dismissal_by = NULL, is_out = false, updated_at = NOW() 
+              WHERE innings_id = $1 AND (player_id = $2 OR player_id = $3)`
+
+	_, err := tx.Exec(query, inningsID, strikerID, nonStrikerID)
 	return err
 }
 

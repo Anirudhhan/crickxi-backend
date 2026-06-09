@@ -176,6 +176,12 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 }
 
 func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+	// clear retire hurt dismissal
+	err := dbHelper.ClearBattersDismissal(tx, delivery.InningsID, delivery.StrikerID, delivery.NonStrikerID)
+	if err != nil {
+		return err
+	}
+
 	legalBall := 0
 	if delivery.IsLegalDelivery {
 		legalBall = 1
@@ -216,7 +222,7 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 	}
 
 	//update batting scoreCard
-	err := dbHelper.UpdateBatterStats(tx, delivery, legalBall, fours, sixes)
+	err = dbHelper.UpdateBatterScorecard(tx, delivery, legalBall, fours, sixes)
 	if err != nil {
 		return err
 	}
