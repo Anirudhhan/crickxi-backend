@@ -47,7 +47,7 @@ func SetUpRoutes() *gin.Engine {
 		v1.GET("/matches", handler.GetMatches)
 		v1.GET("/match/:matchID", handler.GetMatchByID)
 		v1.GET("/match/:matchID/scorecard/:inningsOrder", handler.GetScorecardByMatchIDAndInnings)
-		v1.GET("/innings/:inningsID/overs", handler.GetOverDetails)
+		v1.GET("/match/:matchID/overs/:inningsOrder", handler.GetOverDetails)
 
 		v1.GET("/leaderboard/batting", handler.GetBattingLeaderboard)
 

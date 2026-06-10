@@ -72,20 +72,48 @@ func CompleteInnings(tx *sqlx.Tx, inningsID string) error {
 	return err
 }
 
-func OverDetails(inningID string) (overDetails []models.OversDetails, err error) {
-	query := `SELECT
-				over_number,
-				ball_in_over,
-				is_free_hit,
-				runs_batter,
-				runs_extra,
-				extra_type,
-				is_wicket, 
-				wicket_type
-			FROM balls
-			WHERE innings_id = $1 AND archived_at IS NULL
-			ORDER BY ball_sequence ASC`
+func OverDetails(matchID string, inningsOrder int) (overDetails []models.OversDetails, err error) {
+	query := `
+		SELECT
+		    b.ball_sequence,
+			b.over_number,
+			b.ball_in_over,
+			b.is_free_hit,
+			b.runs_batter,
+			b.runs_extra,
+			b.extra_type,
+			b.is_wicket,
+			b.wicket_type,
+			su.name AS striker_name,
+			bu.name AS bowler_name,
+			wu.name AS wicket_player_name,
+			fu.name AS fielder_name
 
-	err = database.DB.Select(&overDetails, query, inningID)
+		FROM balls b
+		JOIN innings i 
+		    ON i.id = b.innings_id
+		JOIN player_stats sps
+			ON sps.id = b.striker_id
+		JOIN users su
+			ON su.id = sps.user_id
+		JOIN player_stats bps
+			ON bps.id = b.bowler_id
+		JOIN users bu
+			ON bu.id = bps.user_id
+		LEFT JOIN player_stats wps
+			ON wps.id = b.wicket_player_id
+		LEFT JOIN users wu
+			ON wu.id = wps.user_id
+		LEFT JOIN player_stats fps
+			ON fps.id = b.fielder_id
+		LEFT JOIN users fu
+			ON fu.id = fps.user_id
+		WHERE
+			i.match_id = $1
+			AND i.innings_order = $2
+			AND b.archived_at IS NULL
+		ORDER BY b.ball_sequence ASC`
+
+	err = database.DB.Select(&overDetails, query, matchID, inningsOrder)
 	return overDetails, err
 }
