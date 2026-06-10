@@ -30,7 +30,7 @@ func StartLiveMatch(tx *sqlx.Tx, matchID string, inningID string, req models.Cre
 	return err
 }
 
-func GetMatches(search string, status string, page int, limit int) (matches []models.MatchCard, err error) {
+func GetMatches(search string, status string, hostID string, playerID string, page int, limit int) (matches []models.MatchCard, err error) {
 	query := `SELECT
 				m.id AS match_id,
 				m.toss_winner_team_id AS toss_winner_team_id,
@@ -89,12 +89,18 @@ func GetMatches(search string, status string, page int, limit int) (matches []mo
 				tb.name ILIKE '%' || $1 || '%')
 			AND ($2 = '' OR
 				m.match_status = $2::match_status)
+			AND ($5 = '' OR m.host_id = $5::uuid)
+			AND ($6 = '' OR EXISTS (
+				SELECT 1 FROM team_players tp 
+				WHERE (tp.team_id = m.team_a_id OR tp.team_id = m.team_b_id) 
+				AND tp.player_id = $6::uuid
+			))
 			ORDER BY m.created_at DESC
 			LIMIT $3 OFFSET $4`
 
 	offset := (page - 1) * limit
 
-	err = database.DB.Select(&matches, query, search, status, limit, offset)
+	err = database.DB.Select(&matches, query, search, status, limit, offset, hostID, playerID)
 	return matches, err
 }
 

@@ -164,6 +164,8 @@ func CreateMatch(ctx *gin.Context) {
 func GetMatches(ctx *gin.Context) {
 	search := ctx.DefaultQuery("search", "")
 	status := ctx.DefaultQuery("status", "")
+	hostID := ctx.DefaultQuery("host_id", "")
+	playerID := ctx.DefaultQuery("player_id", "")
 
 	page, err := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	if err != nil || page <= 0 {
@@ -179,7 +181,7 @@ func GetMatches(ctx *gin.Context) {
 		limit = 100
 	}
 
-	matches, err := dbHelper.GetMatches(search, status, page, limit)
+	matches, err := dbHelper.GetMatches(search, status, hostID, playerID, page, limit)
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "failed to get matches")
 		return
