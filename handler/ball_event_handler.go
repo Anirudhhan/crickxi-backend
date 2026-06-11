@@ -274,10 +274,6 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 
 	//update live match
 	{
-		// original positions before ball
-		originalStrikerID := delivery.StrikerID
-		originalNonStrikerID := delivery.NonStrikerID
-
 		// current positions after ball movement
 		strikerID := delivery.StrikerID
 		nonStrikerID := delivery.NonStrikerID
@@ -301,44 +297,20 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 
 		// wicket handling
 		if delivery.IsWicket && delivery.WicketPlayerID != nil {
-			// original striker out
-			if *delivery.WicketPlayerID == originalStrikerID {
-				if delivery.NextBatterID != nil {
-					// if strike rotated (now at non-striker end),
-					// new batter becomes non-striker
-					if strikerID != originalStrikerID {
-						nonStrikerID = delivery.NextBatterID
-					} else {
-						// if strike didn't rotate (still at striker end),
-						// new batter becomes striker
-						strikerID = *delivery.NextBatterID
-					}
-				} else {
-					// LAST WICKET/NO NEXT BATTER
-					// If striker is out and no one is coming in,
-					// the person who was NOT out (the non-striker) must become the striker
-					if originalNonStrikerID != nil {
-						strikerID = *originalNonStrikerID
-						nonStrikerID = nil
-					}
-				}
-			}
+			outPlayerID := *delivery.WicketPlayerID
 
-			// original non-striker out
-			if originalNonStrikerID != nil && *delivery.WicketPlayerID == *originalNonStrikerID {
+			if strikerID == outPlayerID {
 				if delivery.NextBatterID != nil {
-					// if strike rotated (now at striker end),
-					// new batter becomes striker
-					if strikerID == *originalNonStrikerID {
-						strikerID = *delivery.NextBatterID
-					} else {
-						// if strike didn't rotate (still at non-striker end),
-						// new batter becomes non-striker
-						nonStrikerID = delivery.NextBatterID
-					}
+					strikerID = *delivery.NextBatterID
+				} else if nonStrikerID != nil {
+					// No next batter, move the other player to striker if they exist
+					strikerID = *nonStrikerID
+					nonStrikerID = nil
+				}
+			} else if nonStrikerID != nil && *nonStrikerID == outPlayerID {
+				if delivery.NextBatterID != nil {
+					nonStrikerID = delivery.NextBatterID
 				} else {
-					// LAST WICKET/NO NEXT BATTER
-					// Non-striker is out, striker stays as striker
 					nonStrikerID = nil
 				}
 			}
@@ -377,7 +349,18 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 		if delivery.IsWicket {
 			//handle wicket ended
 			currentWickets := liveMatchData.Wickets + inningsWicket
-			if currentWickets >= liveMatchData.BattingPlayerCount {
+
+			noBattersLeft := false
+			if delivery.WicketPlayerID != nil && delivery.NextBatterID == nil {
+				// If the out player was the only one on the field (striker),
+				// and there was no non-striker to take their place, no batters are left.
+				// In our new logic, if strikerID still points to outPlayerID, they weren't replaced.
+				if *delivery.WicketPlayerID == delivery.StrikerID && delivery.NonStrikerID == nil {
+					noBattersLeft = true
+				}
+			}
+
+			if currentWickets >= liveMatchData.BattingPlayerCount || noBattersLeft {
 				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
 				if err != nil {
 					return err
