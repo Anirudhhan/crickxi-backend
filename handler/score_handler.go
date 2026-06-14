@@ -17,23 +17,22 @@ func GetScorecardByMatchIDAndInnings(ctx *gin.Context) {
 	inningsOrderStr := ctx.Param("inningsOrder")
 
 	inningsOrder, err := strconv.Atoi(inningsOrderStr)
-
 	if err != nil {
 		utils.ErrorResponse(ctx, http.StatusBadRequest,
-			errors.New("inning order must be a number"), "inning order must be a number")
+			errors.New("innings order must be a number"), "innings order must be a number")
 		return
 	}
 
-	if matchID == "" || (inningsOrder != 1 && inningsOrder != 2) {
+	if matchID == "" || inningsOrder <= 0 {
 		utils.ErrorResponse(ctx, http.StatusBadRequest,
-			errors.New("valid match ID and inning order are required"), "valid match ID and inning order are required")
+			errors.New("valid match ID and innings order are required"), "valid match ID and innings order are required")
 		return
 	}
-
+	
 	var matchScoreCard models.MatchScoreCard
 	matchScoreCard.InningsOrder = inningsOrder
 
-	inningDetails, err := dbHelper.GetInningsDetails(matchID, matchScoreCard.InningsOrder)
+	inningsDetails, err := dbHelper.GetInningsDetails(matchID, matchScoreCard.InningsOrder)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.ErrorResponse(ctx, http.StatusNotFound, err, "invalid match id")
@@ -42,14 +41,14 @@ func GetScorecardByMatchIDAndInnings(ctx *gin.Context) {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, err, "internal server error")
 		return
 	}
-	matchScoreCard.BattingTeamID = inningDetails.BattingTeamID
-	matchScoreCard.BattingTeamName = inningDetails.BattingTeamName
+	matchScoreCard.BattingTeamID = inningsDetails.BattingTeamID
+	matchScoreCard.BattingTeamName = inningsDetails.BattingTeamName
 
-	matchScoreCard.BowlingTeamID = inningDetails.BowlingTeamID
-	matchScoreCard.BowlingTeamName = inningDetails.BowlingTeamName
+	matchScoreCard.BowlingTeamID = inningsDetails.BowlingTeamID
+	matchScoreCard.BowlingTeamName = inningsDetails.BowlingTeamName
 
-	matchScoreCard.TotalRuns = inningDetails.TotalRuns
-	matchScoreCard.Extras = inningDetails.Extras
+	matchScoreCard.TotalRuns = inningsDetails.TotalRuns
+	matchScoreCard.Extras = inningsDetails.Extras
 
 	battingScoreCard, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(nil, matchID, matchScoreCard.InningsOrder)
 	if err != nil {

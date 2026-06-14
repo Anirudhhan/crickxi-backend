@@ -61,15 +61,15 @@ func BallEvent(ctx *gin.Context) {
 	}
 
 	matchEnded := false
-	inningEnded := false
-	txErr := ProcessBallEventHelper(delivery, liveMatchData, matchID, &inningEnded, &matchEnded)
+	inningsEnded := false
+	txErr := ProcessBallEventHelper(delivery, liveMatchData, matchID, &inningsEnded, &matchEnded)
 
 	if txErr != nil {
 		utils.ErrorResponse(ctx, http.StatusInternalServerError, txErr, "failed to add ball")
 		return
 	}
 
-	if inningEnded {
+	if inningsEnded {
 		ctx.JSON(http.StatusOK, gin.H{"message": "innings ended. start next innings"})
 		return
 	}
@@ -120,7 +120,7 @@ func ValidateBattersNotOutHelper(delivery models.Delivery) error {
 }
 
 func PrepareDeliveryHelper(delivery *models.Delivery, liveMatchData models.LiveMatchDetails, req models.BallEventReq) {
-	delivery.InningsID = liveMatchData.CurrentInningID
+	delivery.InningsID = liveMatchData.CurrentInningsID
 	delivery.StrikerID = liveMatchData.StrikerID
 	delivery.NonStrikerID = liveMatchData.NonStrikerID
 	delivery.BowlerID = liveMatchData.CurrentBowlerID
@@ -159,7 +159,7 @@ func PrepareDeliveryHelper(delivery *models.Delivery, liveMatchData models.LiveM
 
 }
 
-func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningsEnded *bool, matchEnded *bool) error {
 	err := database.Tx(func(tx *sqlx.Tx) error {
 
 		err := dbHelper.CreateBallEvent(tx, delivery)
@@ -167,7 +167,7 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 			return err
 		}
 
-		return ApplyBallStats(tx, delivery, liveMatchData, matchID, inningEnded, matchEnded)
+		return ApplyBallStats(tx, delivery, liveMatchData, matchID, inningsEnded, matchEnded)
 	})
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func ProcessBallEventHelper(delivery models.Delivery, liveMatchData models.LiveM
 	return nil
 }
 
-func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.LiveMatchDetails, matchID string, inningsEnded *bool, matchEnded *bool) error {
 	// clear retire hurt dismissal
 	err := dbHelper.ClearBattersDismissal(tx, delivery.InningsID, delivery.StrikerID, delivery.NonStrikerID)
 	if err != nil {
@@ -222,7 +222,7 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 	}
 
 	//update batting scoreCard
-	err = dbHelper.UpdateBatterScorecard(tx, delivery, legalBall, fours, sixes)
+	err = dbHelper.UpdateBattingScorecard(tx, delivery, legalBall, fours, sixes)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 			//handle score chased
 			target := *liveMatchData.PreviousInningsScore
 			if liveMatchData.CurrentScore > target {
-				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
+				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningsEnded, matchEnded)
 				if err != nil {
 					return err
 				}
@@ -361,7 +361,7 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 			}
 
 			if currentWickets >= liveMatchData.BattingPlayerCount || noBattersLeft {
-				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
+				err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningsEnded, matchEnded)
 				if err != nil {
 					return err
 				}
@@ -376,7 +376,7 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 			currentLegalBalls++
 		}
 		if currentLegalBalls >= liveMatchData.OversPerSide*6 {
-			err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningEnded, matchEnded)
+			err = HandleInningsOrMatchCompletion(tx, liveMatchData, matchID, inningsEnded, matchEnded)
 			if err != nil {
 				return err
 			}
@@ -388,15 +388,15 @@ func ApplyBallStats(tx *sqlx.Tx, delivery models.Delivery, liveMatchData models.
 	return nil
 }
 
-func HandleInningsOrMatchCompletion(tx *sqlx.Tx, liveMatchData models.LiveMatchDetails, matchID string, inningEnded *bool, matchEnded *bool) error {
+func HandleInningsOrMatchCompletion(tx *sqlx.Tx, liveMatchData models.LiveMatchDetails, matchID string, inningsEnded *bool, matchEnded *bool) error {
 
-	err := dbHelper.CompleteInnings(tx, liveMatchData.CurrentInningID)
+	err := dbHelper.CompleteInnings(tx, liveMatchData.CurrentInningsID)
 	if err != nil {
 		return err
 	}
 
 	// second innings, match completed
-	if liveMatchData.CurrentInningNo == 2 {
+	if liveMatchData.CurrentInningsNo == 2 {
 		var winnerTeamID *string
 		if liveMatchData.PreviousInningsScore != nil {
 			if liveMatchData.CurrentScore > *liveMatchData.PreviousInningsScore {
@@ -417,8 +417,8 @@ func HandleInningsOrMatchCompletion(tx *sqlx.Tx, liveMatchData models.LiveMatchD
 		}
 	}
 
-	if liveMatchData.CurrentInningNo == 1 {
-		*inningEnded = true
+	if liveMatchData.CurrentInningsNo == 1 {
+		*inningsEnded = true
 	} else {
 		*matchEnded = true
 	}
@@ -459,15 +459,15 @@ func ChangeBowler(ctx *gin.Context) {
 
 func UpdatePlayerCareerStats(tx *sqlx.Tx, matchID string, winnerTeamID *string) error {
 
-	for inningOrder := 1; inningOrder <= 2; inningOrder++ {
+	for inningsOrder := 1; inningsOrder <= 2; inningsOrder++ {
 
-		battingScorecards, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(tx, matchID, inningOrder)
+		battingScorecards, err := dbHelper.GetBattingScorecardByMatchIDAndInnings(tx, matchID, inningsOrder)
 		if err != nil {
 			return err
 		}
 
 		matchPlayed := 0
-		if inningOrder == 2 {
+		if inningsOrder == 2 {
 			matchPlayed = 1
 		}
 
@@ -548,7 +548,7 @@ func UpdatePlayerCareerStats(tx *sqlx.Tx, matchID string, winnerTeamID *string) 
 		bowlingScorecards, err := dbHelper.GetBowlingScorecardByMatchIDAndInnings(
 			tx,
 			matchID,
-			inningOrder,
+			inningsOrder,
 		)
 		if err != nil {
 			return err
@@ -643,9 +643,9 @@ func UndoBall(ctx *gin.Context) {
 		return
 	}
 
-	// allow undoing balls from the CURRENT inning (shouldnt go back to prev inning)
-	if lastBall.InningsID != liveMatchData.CurrentInningID {
-		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("cannot undo balls from a previous inning"), "previous inning locked")
+	// allow undoing balls from the CURRENT innings (shouldnt go back to prev innings)
+	if lastBall.InningsID != liveMatchData.CurrentInningsID {
+		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("cannot undo balls from a previous innings"), "previous innings locked")
 		return
 	}
 
@@ -698,8 +698,8 @@ func UndoBall(ctx *gin.Context) {
 		for _, ball := range activeBalls {
 			ball.LegalBalls = recalcMatchData.LegalBalls
 
-			var inningEnded, matchEnded bool
-			err = ApplyBallStats(tx, ball, recalcMatchData, matchID, &inningEnded, &matchEnded)
+			var inningsEnded, matchEnded bool
+			err = ApplyBallStats(tx, ball, recalcMatchData, matchID, &inningsEnded, &matchEnded)
 			if err != nil {
 				return err
 			}

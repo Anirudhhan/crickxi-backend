@@ -11,7 +11,7 @@ func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string, toss
 
 	query := `
 		INSERT INTO matches(toss_winner_team_id, team_a_id, team_b_id, toss_decision, host_id, 
-		                    scorer1_id, scorer2_id, current_inning_no, overs_per_side, match_status, start_time)
+		                    scorer1_id, scorer2_id, current_innings_no, overs_per_side, match_status, start_time)
 		VALUES($1, $2, $3, $4, $5, $6, $7, 1, $8, 'live', NOW())
 -- 		TODO: take start time from user and match_status
 		RETURNING id`
@@ -22,11 +22,11 @@ func CreateMatch(tx *sqlx.Tx, req models.CreateMatchRequest, hostID string, toss
 	return matchID, err
 }
 
-func StartLiveMatch(tx *sqlx.Tx, matchID string, inningID string, req models.CreateMatchRequest) (err error) {
-	query := `INSERT INTO live_match(match_id, current_inning_id, striker_id, non_striker_id, current_bowler_id)
+func StartLiveMatch(tx *sqlx.Tx, matchID string, inningsID string, req models.CreateMatchRequest) (err error) {
+	query := `INSERT INTO live_match(match_id, current_innings_id, striker_id, non_striker_id, current_bowler_id)
 				VALUES ($1, $2, $3,$4, $5)`
 
-	_, err = tx.Exec(query, matchID, inningID, req.StrikerID, req.NonStrikerID, req.CurrentBowlerID)
+	_, err = tx.Exec(query, matchID, inningsID, req.StrikerID, req.NonStrikerID, req.CurrentBowlerID)
 	return err
 }
 
@@ -70,17 +70,17 @@ func GetMatches(search string, status string, hostID string, playerID string, pa
 			LEFT JOIN users su
 				ON sps.user_id = su.id
 			LEFT JOIN batting_scorecards bsc
-				ON bsc.player_id = sps.id AND lm.current_inning_id = bsc.innings_id
+				ON bsc.player_id = sps.id AND lm.current_innings_id = bsc.innings_id
 			LEFT JOIN player_stats bps
 				ON lm.current_bowler_id = bps.id
 			LEFT JOIN innings pi
 				ON pi.match_id = m.id
-				AND pi.innings_order = m.current_inning_no - 1
+				AND pi.innings_order = m.current_innings_no - 1
 			LEFT JOIN users bu
 				ON bps.user_id = bu.id
 			LEFT JOIN bowling_scorecards bwsc
 				ON bwsc.player_id = bps.id
-				AND lm.current_inning_id = bwsc.innings_id
+				AND lm.current_innings_id = bwsc.innings_id
 			
 			WHERE
 				m.archived_at IS NULL
@@ -114,7 +114,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 				m.host_id AS host_id,
 				m.scorer1_id AS scorer1_id,
 				m.scorer2_id AS scorer2_id,
-				m.current_inning_no AS current_inning_no,
+				m.current_innings_no AS current_innings_no,
 				m.match_status AS match_status,
 				m.overs_per_side AS overs_per_side,
 				m.start_time AS start_time,
@@ -135,7 +135,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 				COALESCE(pi.legal_balls, 0)
 					AS previous_innings_legal_balls,
 				lm.current_bowler_id AS bowler_id,
-				lm.current_inning_id AS current_inning_id,
+				lm.current_innings_id AS current_innings_id,
 				lm.striker_id AS striker_id,
 				lm.non_striker_id AS non_striker_id,
 				lm.is_free_hit AS is_free_hit,
@@ -163,7 +163,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 			    
 			LEFT JOIN innings pi
 				ON pi.match_id = m.id
-				AND pi.innings_order = m.current_inning_no - 1
+				AND pi.innings_order = m.current_innings_no - 1
 			
 			LEFT JOIN player_stats sps
 				ON lm.striker_id = sps.id
@@ -173,7 +173,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 			
 			LEFT JOIN batting_scorecards bsc
 				ON bsc.player_id = sps.id
-				AND lm.current_inning_id = bsc.innings_id
+				AND lm.current_innings_id = bsc.innings_id
 			
 			LEFT JOIN player_stats nsps
 				ON lm.non_striker_id = nsps.id
@@ -183,7 +183,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 			
 			LEFT JOIN batting_scorecards bnsc
 				ON bnsc.player_id = nsps.id
-				AND lm.current_inning_id = bnsc.innings_id
+				AND lm.current_innings_id = bnsc.innings_id
 			
 			LEFT JOIN player_stats bps
 				ON lm.current_bowler_id = bps.id
@@ -193,7 +193,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 			
 			LEFT JOIN bowling_scorecards bwsc
 				ON bwsc.player_id = bps.id
-				AND lm.current_inning_id = bwsc.innings_id
+				AND lm.current_innings_id = bwsc.innings_id
 			
 			WHERE
 				m.id = $1
@@ -207,7 +207,7 @@ func GetMatchByID(matchID string) (matchCard models.MatchCard, err error) {
 
 func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails, err error) {
 	query := `SELECT
-				lm.current_inning_id,
+				lm.current_innings_id,
 				lm.striker_id,
 				lm.non_striker_id,
 				lm.current_bowler_id,
@@ -217,7 +217,7 @@ func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails,
 				lm.wickets,
 				lm.is_free_hit,
 				m.overs_per_side,
-				m.current_inning_no,
+				m.current_innings_no,
 				m.end_time,
 				i.batting_team_id,
 				i.bowling_team_id,
@@ -228,14 +228,14 @@ func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails,
 					 LEFT JOIN matches m
 							   ON m.id = lm.match_id
 					 LEFT JOIN innings i
-							   ON i.id = lm.current_inning_id
+							   ON i.id = lm.current_innings_id
 					 LEFT JOIN batting_scorecards bsc
 							   ON bsc.innings_id = i.id
 					 LEFT JOIN innings pi
-							   ON pi.match_id = m.id AND pi.innings_order = m.current_inning_no - 1
+							   ON pi.match_id = m.id AND pi.innings_order = m.current_innings_no - 1
 			WHERE lm.match_id = $1
 			GROUP BY
-				lm.current_inning_id,
+				lm.current_innings_id,
 				lm.striker_id,
 				lm.non_striker_id,
 				lm.current_bowler_id,
@@ -245,7 +245,7 @@ func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails,
 				lm.wickets,
 				lm.is_free_hit,
 				m.overs_per_side,
-				m.current_inning_no,
+				m.current_innings_no,
 				m.end_time,
 				i.batting_team_id,
 				i.bowling_team_id,
@@ -256,11 +256,11 @@ func GetLiveMatchDetails(matchID string) (liveMatchData models.LiveMatchDetails,
 	return liveMatchData, err
 }
 
-func ResetLiveMatchForNextInnings(tx *sqlx.Tx, matchID string, inningID string, req models.StartNextInningsReq) error {
+func ResetLiveMatchForNextInnings(tx *sqlx.Tx, matchID string, inningsID string, req models.StartNextInningsReq) error {
 
 	query := `UPDATE live_match
 				SET
-					current_inning_id = $1,
+					current_innings_id = $1,
 					current_score = 0,
 					wickets = 0,
 					legal_balls = 0,
@@ -272,17 +272,17 @@ func ResetLiveMatchForNextInnings(tx *sqlx.Tx, matchID string, inningID string, 
 					updated_at = NOW()
 				WHERE match_id = $5`
 
-	_, err := tx.Exec(query, inningID, req.StrikerID, req.NonStrikerID, req.BowlerID, matchID)
+	_, err := tx.Exec(query, inningsID, req.StrikerID, req.NonStrikerID, req.BowlerID, matchID)
 	return err
 }
 
-func UpdateMatchInningNo(tx *sqlx.Tx, matchID string, inningNo int) error {
+func UpdateMatchInningsNo(tx *sqlx.Tx, matchID string, inningsNo int) error {
 	query := `UPDATE matches
 				SET
-					current_inning_no = $1,	updated_at = NOW()
+					current_innings_no = $1,	updated_at = NOW()
 				WHERE id = $2`
 
-	_, err := tx.Exec(query, inningNo, matchID)
+	_, err := tx.Exec(query, inningsNo, matchID)
 	return err
 }
 
@@ -291,7 +291,7 @@ func ValidateBowlerID(matchID string, bowlerID string) (isValid bool, err error)
 				SELECT 1
 				FROM live_match lm
 				INNER JOIN innings i
-					ON i.id = lm.current_inning_id
+					ON i.id = lm.current_innings_id
 				INNER JOIN team_players tp
 					ON tp.team_id = i.bowling_team_id
 				WHERE lm.match_id = $1

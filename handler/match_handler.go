@@ -126,23 +126,23 @@ func CreateMatch(ctx *gin.Context) {
 			return errors.New("bowler must be in the bowling team")
 		}
 
-		inningID, err := dbHelper.StartInnings(tx, matchData.MatchID, battingTeamID, bowlingTeamID, 1, "normal")
+		inningsID, err := dbHelper.StartInnings(tx, matchData.MatchID, battingTeamID, bowlingTeamID, 1, "normal")
 		if err != nil {
 			return err
 		}
-		matchData.CurrentInningID = inningID
+		matchData.CurrentInningsID = inningsID
 
-		err = dbHelper.CreateBattingScorecards(tx, matchData.CurrentInningID, battingPlayers)
-		if err != nil {
-			return err
-		}
-
-		err = dbHelper.CreateBowlingScorecards(tx, inningID, bowlingPlayers)
+		err = dbHelper.CreateBattingScorecards(tx, matchData.CurrentInningsID, battingPlayers)
 		if err != nil {
 			return err
 		}
 
-		err = dbHelper.StartLiveMatch(tx, matchData.MatchID, matchData.CurrentInningID, createMatchReq)
+		err = dbHelper.CreateBowlingScorecards(tx, inningsID, bowlingPlayers)
+		if err != nil {
+			return err
+		}
+
+		err = dbHelper.StartLiveMatch(tx, matchData.MatchID, matchData.CurrentInningsID, createMatchReq)
 		if err != nil {
 			return err
 		}
@@ -242,7 +242,7 @@ func StartNextInnings(ctx *gin.Context) {
 		return
 	}
 
-	if matchData.CurrentInningNo != 1 {
+	if matchData.CurrentInningsNo != 1 {
 		utils.ErrorResponse(ctx, http.StatusConflict, errors.New("second innings already started"), "second innings already started")
 		return
 	}
@@ -265,7 +265,7 @@ func StartNextInnings(ctx *gin.Context) {
 
 			bowlingTeamID := matchData.BattingTeamID
 
-			inningID, err := dbHelper.StartInnings(tx, matchID, battingTeamID, bowlingTeamID, 2, "normal")
+			inningsID, err := dbHelper.StartInnings(tx, matchID, battingTeamID, bowlingTeamID, 2, "normal")
 
 			if err != nil {
 				return err
@@ -295,25 +295,25 @@ func StartNextInnings(ctx *gin.Context) {
 				return errors.New("bowler must be in the bowling team")
 			}
 
-			err = dbHelper.CreateBattingScorecards(tx, inningID, battingPlayers)
+			err = dbHelper.CreateBattingScorecards(tx, inningsID, battingPlayers)
 
 			if err != nil {
 				return err
 			}
 
-			err = dbHelper.CreateBowlingScorecards(tx, inningID, bowlingPlayers)
+			err = dbHelper.CreateBowlingScorecards(tx, inningsID, bowlingPlayers)
 
 			if err != nil {
 				return err
 			}
 
-			err = dbHelper.ResetLiveMatchForNextInnings(tx, matchID, inningID, nextInningsReq)
+			err = dbHelper.ResetLiveMatchForNextInnings(tx, matchID, inningsID, nextInningsReq)
 
 			if err != nil {
 				return err
 			}
 
-			err = dbHelper.UpdateMatchInningNo(tx, matchID, 2)
+			err = dbHelper.UpdateMatchInningsNo(tx, matchID, 2)
 
 			if err != nil {
 				return err

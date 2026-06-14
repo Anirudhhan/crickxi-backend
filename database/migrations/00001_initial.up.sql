@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS matches (
     host_id UUID REFERENCES users(id),
     scorer1_id UUID REFERENCES users(id),
     scorer2_id UUID REFERENCES users(id),
-    current_inning_no INT NOT NULL,
+    current_innings_no INT NOT NULL,
     match_status match_status DEFAULT 'live',
     overs_per_side INT DEFAULT 10,
     start_time TIMESTAMPTZ,
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS bowling_scorecards (
 
 CREATE TABLE IF NOT EXISTS live_match (
     match_id UUID PRIMARY KEY REFERENCES matches(id),
-    current_inning_id UUID REFERENCES innings(id),
+    current_innings_id UUID REFERENCES innings(id),
     striker_id UUID REFERENCES player_stats(id),
     non_striker_id UUID REFERENCES player_stats(id),
     current_bowler_id UUID REFERENCES player_stats(id),

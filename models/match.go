@@ -3,10 +3,10 @@ package models
 import "time"
 
 type MatchData struct {
-	MatchID         string
-	CurrentInningID string
-	TeamAID         string
-	TeamBID         string
+	MatchID          string
+	CurrentInningsID string
+	TeamAID          string
+	TeamBID          string
 }
 
 type CreateMatchRequest struct {
@@ -44,7 +44,7 @@ type MatchCard struct {
 	Scorer1ID *string `db:"scorer1_id" json:"scorer1ID"`
 	Scorer2ID *string `db:"scorer2_id" json:"scorer2ID"`
 
-	CurrentInningNo *int `db:"current_inning_no" json:"currentInningNo"`
+	CurrentInningsNo *int `db:"current_innings_no" json:"currentInningsNo"`
 
 	MatchStatus string `db:"match_status" json:"matchStatus"`
 
@@ -70,7 +70,7 @@ type MatchCard struct {
 	PreviousInningsScore      *int `db:"previous_innings_score" json:"previousInningsScore"`
 	PreviousInningsLegalBalls *int `db:"previous_innings_legal_balls" json:"previousInningsLegalBalls"`
 
-	CurrentInningID *string `db:"current_inning_id" json:"currentInningID"`
+	CurrentInningsID *string `db:"current_innings_id" json:"currentInningsID"`
 
 	StrikerID    *string `db:"striker_id" json:"strikerID"`
 	StrikerName  *string `db:"striker_name" json:"strikerName"`
@@ -90,7 +90,7 @@ type MatchCard struct {
 }
 
 type LiveMatchDetails struct {
-	CurrentInningID     string  `db:"current_inning_id"`
+	CurrentInningsID    string  `db:"current_innings_id"`
 	StrikerID           string  `db:"striker_id"`
 	NonStrikerID        *string `db:"non_striker_id"`
 	CurrentBowlerID     string  `db:"current_bowler_id"`
@@ -101,7 +101,7 @@ type LiveMatchDetails struct {
 	IsFreeHit           bool    `db:"is_free_hit"`
 
 	OversPerSide         int    `db:"overs_per_side"`
-	CurrentInningNo      int    `db:"current_inning_no"`
+	CurrentInningsNo     int    `db:"current_innings_no"`
 	BattingTeamID        string `db:"batting_team_id"`
 	BowlingTeamID        string `db:"bowling_team_id"`
 	BattingPlayerCount   int    `db:"batting_player_count"`

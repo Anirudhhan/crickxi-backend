@@ -9,7 +9,7 @@ type Player struct {
 	Name      string `json:"name"`
 }
 type PlayerStats struct {
-	Id     string `db:"id" json:"id"`
+	ID     string `db:"id" json:"id"`
 	UserID string `db:"user_id" json:"user_id"`
 
 	Name string `db:"name" json:"name"`

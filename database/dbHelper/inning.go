@@ -32,13 +32,13 @@ func UpdateInnings(tx *sqlx.Tx, delivery models.Delivery, totalRuns int, wicket 
 	return err
 }
 
-func CreateBattingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {
+func CreateBattingScorecards(tx *sqlx.Tx, inningsID string, players []models.Player) error {
 
 	query := `INSERT INTO batting_scorecards(innings_id,player_id)
 				VALUES($1, $2)`
 
 	for _, player := range players {
-		_, err := tx.Exec(query, inningID, player.PlayerID)
+		_, err := tx.Exec(query, inningsID, player.PlayerID)
 		if err != nil {
 			return err
 		}
@@ -47,13 +47,13 @@ func CreateBattingScorecards(tx *sqlx.Tx, inningID string, players []models.Play
 	return nil
 }
 
-func CreateBowlingScorecards(tx *sqlx.Tx, inningID string, players []models.Player) error {
+func CreateBowlingScorecards(tx *sqlx.Tx, inningsID string, players []models.Player) error {
 
 	query := `INSERT INTO bowling_scorecards(innings_id,player_id)
 				VALUES($1, $2)`
 
 	for _, player := range players {
-		_, err := tx.Exec(query, inningID, player.PlayerID)
+		_, err := tx.Exec(query, inningsID, player.PlayerID)
 		if err != nil {
 			return err
 		}
