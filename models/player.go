@@ -15,51 +15,51 @@ type PlayerStats struct {
 	Name string `db:"name" json:"name"`
 
 	// batting
-	Runs          int64 `db:"runs" json:"runs"`
-	BallsFaced    int64 `db:"balls_faced" json:"balls_faced"`
-	InningsBatted int64 `db:"innings_batted" json:"innings_batted"`
-	NotOuts       int64 `db:"not_outs" json:"not_outs"`
+	Runs          int `db:"runs" json:"runs"`
+	BallsFaced    int `db:"balls_faced" json:"balls_faced"`
+	InningsBatted int `db:"innings_batted" json:"innings_batted"`
+	NotOuts       int `db:"not_outs" json:"not_outs"`
 
-	Fours int64 `db:"fours" json:"fours"`
-	Sixes int64 `db:"sixes" json:"sixes"`
+	Fours int `db:"fours" json:"fours"`
+	Sixes int `db:"sixes" json:"sixes"`
 
-	HighestScore int64 `db:"highest_score" json:"highest_score"`
+	HighestScore int `db:"highest_score" json:"highest_score"`
 
-	Ducks       int64 `db:"ducks" json:"ducks"`
-	GoldenDucks int64 `db:"golden_ducks" json:"golden_ducks"`
+	Ducks       int `db:"ducks" json:"ducks"`
+	GoldenDucks int `db:"golden_ducks" json:"golden_ducks"`
 
-	Fifties  int64 `db:"fifties" json:"fifties"`
-	Hundreds int64 `db:"hundreds" json:"hundreds"`
+	Fifties  int `db:"fifties" json:"fifties"`
+	Hundreds int `db:"hundreds" json:"hundreds"`
 
 	// bowling
-	Wickets int64 `db:"wickets" json:"wickets"`
+	Wickets int `db:"wickets" json:"wickets"`
 
-	BallsBowled  int64 `db:"balls_bowled" json:"balls_bowled"`
-	RunsConceded int64 `db:"runs_conceded" json:"runs_conceded"`
+	BallsBowled  int `db:"balls_bowled" json:"balls_bowled"`
+	RunsConceded int `db:"runs_conceded" json:"runs_conceded"`
 
-	MaidenOvers int64 `db:"maiden_overs" json:"maiden_overs"`
+	MaidenOvers int `db:"maiden_overs" json:"maiden_overs"`
 
-	Wides   int64 `db:"wides" json:"wides"`
-	NoBalls int64 `db:"no_balls" json:"no_balls"`
+	Wides   int `db:"wides" json:"wides"`
+	NoBalls int `db:"no_balls" json:"no_balls"`
 
-	BestBowlingWickets int64 `db:"best_bowling_wickets" json:"best_bowling_wickets"`
-	BestBowlingRuns    int64 `db:"best_bowling_runs" json:"best_bowling_runs"`
+	BestBowlingWickets int `db:"best_bowling_wickets" json:"best_bowling_wickets"`
+	BestBowlingRuns    int `db:"best_bowling_runs" json:"best_bowling_runs"`
 
-	InningsBowled int64 `db:"innings_bowled" json:"innings_bowled"`
+	InningsBowled int `db:"innings_bowled" json:"innings_bowled"`
 
 	// fielding
-	Catches   int64 `db:"catches" json:"catches"`
-	RunOuts   int64 `db:"run_outs" json:"run_outs"`
-	Stumpings int64 `db:"stumpings" json:"stumpings"`
+	Catches   int `db:"catches" json:"catches"`
+	RunOuts   int `db:"run_outs" json:"run_outs"`
+	Stumpings int `db:"stumpings" json:"stumpings"`
 
 	// match stats
-	MatchesPlayed int64 `db:"matches_played" json:"matches_played"`
-	MatchesWon    int64 `db:"matches_won" json:"matches_won"`
-	MatchesLost   int64 `db:"matches_lost" json:"matches_lost"`
+	MatchesPlayed int `db:"matches_played" json:"matches_played"`
+	MatchesWon    int `db:"matches_won" json:"matches_won"`
+	MatchesLost   int `db:"matches_lost" json:"matches_lost"`
 
 	// fantasy/game points
-	TotalPoints int64 `db:"total_points" json:"total_points"`
-	MVPs        int64 `db:"mvps" json:"mvps"`
+	TotalPoints int `db:"total_points" json:"total_points"`
+	MVPs        int `db:"mvps" json:"mvps"`
 
 	// styles
 	BowlingStyle *string `db:"bowling_style" json:"bowling_style"`

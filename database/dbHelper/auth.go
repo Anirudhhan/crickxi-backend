@@ -102,18 +102,16 @@ func ArchiveUserSessions(tx *sqlx.Tx, userID string) error {
 
 func ValidateHostOrScorer(matchID string, userID string) (bool, error) {
 
-	query := `SELECT EXISTS(
-				SELECT 1
-				FROM matches
-				WHERE id = $1
-				AND (
-					host_id = $2
-					OR scorer1_id = $2
-					OR scorer2_id = $2
-				))`
+	query := `SELECT COUNT(*)
+          FROM matches
+          WHERE id = $1
+          AND (
+              host_id = $2
+              OR scorer1_id = $2
+              OR scorer2_id = $2)`
 
-	var isValid bool
+	var count int
 
-	err := database.DB.Get(&isValid, query, matchID, userID)
-	return isValid, err
+	err := database.DB.Get(&count, query, matchID, userID)
+	return count > 0, err
 }
